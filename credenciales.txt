@@ -1,0 +1,41 @@
+=== CREDENCIALES DE DESARROLLO (HAV PORTAL) ===
+
+# ADMINISTRADORES (1)
+Email: admin@hav.edu.ve
+Pass: admin123
+
+# RECEPCIÓN (2)
+Email: recepcion1@hav.edu.ve
+Pass: recepcion2026
+Nombre: Ana Gómez
+
+Email: recepcion2@hav.edu.ve
+Pass: recepcion2026
+Nombre: Carlos Ruiz
+
+# ESPECIALISTAS - INTERNISTAS (2)
+Email: internista1@hav.edu.ve
+Pass: internista123
+Nombre: Dra. María Pérez
+
+Email: internista2@hav.edu.ve
+Pass: internista123
+Nombre: Dr. Juan Díaz
+
+# ESPECIALISTAS - TRAUMATOLOGÍA (2)
+Email: trauma1@hav.edu.ve
+Pass: trauma123
+Nombre: Dr. Roberto Mendoza
+
+Email: trauma2@hav.edu.ve
+Pass: trauma123
+Nombre: Dra. Lucia Silva
+
+# ESPECIALISTAS - CARDIOLOGÍA (2)
+Email: cardio1@hav.edu.ve
+Pass: cardio123
+Nombre: Dr. Ernesto Fuentes
+
+Email: cardio2@hav.edu.ve
+Pass: cardio123
+Nombre: Dra. Sofía López

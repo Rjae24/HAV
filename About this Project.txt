@@ -1,0 +1,59 @@
+# Acerca de este Proyecto
+
+## Lenguajes de Programación y Tecnologías Utilizadas
+Este proyecto es una aplicación web Frontend dinámica (SPAs) desarrollada con el framework de React. Los lenguajes y tecnologías principales utilizados son:
+
+1. **JavaScript (JS / JSX)**: Utilizado para la lógica principal de la aplicación, archivo de enrutamiento y parte de las vistas base.
+2. **TypeScript (TS / TSX)**: Utilizado de forma extensa en el sistema de calendario complejo y en la moderna biblioteca de componentes UI para añadir tipado estático, reduciendo los errores de tiempo de ejecución y mejorando la estructuración del código.
+3. **HTML5**: Estructura básica e inicial del proyecto (`index.html`).
+4. **CSS3 / Tailwind CSS**: Utilizado para estilos de interfaz. Múltiples clases de utilidad son usadas para definir aspectos visuales sin necesidad de abusar de archivos CSS estándar, logrando un diseño muy escalable.
+5. **Vite**: Entorno de desarrollo para compilar el código fuente con alta velocidad.
+
+---
+
+## Estructura de Archivos y su respectiva Función del Código
+
+### Archivos de Configuración (Ubicados en la raíz del repositorio)
+* `package.json` y `package-lock.json`: Administran las dependencias del proyecto, es decir, qué librerías de terceros necesita Node.js, e incluyen scripts como el de iniciar el entorno de desarrollo.
+* `vite.config.js`: Archivo que adapta la configuración de nuestro empaquetador (bundler) Vite, en concreto indicando el soporte de React.
+* `tailwind.config.js` y `postcss.config.js`: Definición de tema customizado de CSS en Tailwind, donde se introducen configuraciones de colores, animación, y pre-procesadores obligatorios.
+* `index.html`: La plantilla o "página esqueleto" donde React inyecta la aplicación e interfaz entera en tiempo de ejecución.
+* `credenciales.txt` y `build_errors.txt`: Textos auxiliares que posiblemente almacenen usuarios de testeo y registros de errores encontrados en compilaciones pasadas.
+* `.gitignore`: Define el conjunto de carpetas (`node_modules`) que son locales y pesadas, por lo cual Git no debe subirlas en caso de versionar el repositorio.
+
+### Código Fuente Principal (`src/`)
+* `main.jsx`: Archivo principal por donde arranca la aplicación (Entry Point). Su código renderiza el `<App />` dentro del nodo "root" de `index.html`.
+* `App.jsx`: Componente superior que agrupa la estructura global y maneja el sistema de navegación (Router). Determina qué "Vista" cargar según la ruta actual en el navegador.
+* `index.css`: Fichero CSS universal que incorpora las herramientas y resets fundamentales que importan todas las funciones de estilo global e insercciones de Tailwind CSS.
+* `types.ts`: Definición global de agrupaciones y estructuras para TypeScript.
+
+### Vistas Principales o "Views" (`src/views/`)
+Son las agrupaciones de nivel superior correspondientes a una "Pantalla Completa" de la plataforma, que responden a accesos por roles de usuario preestablecidos.
+* `LoginScreen.jsx`: Gestiona la interfaz del formulario mediante el cual los usuarios inician sesión y comprueban sus validaciones y credenciales del sistema.
+* `medico/MedicoDashboard.jsx`: El panel de administración o dashboard del médico; en el cual previsiblemente revisaría sus horarios de turnos asignados y datos.
+* `recepcion/RecepcionDashboard.jsx`: Vista fundamental interactiva para los usuarios del área de secretaría o recepción. Posiblemente contiene lógica para confirmar citas, dar altas de turno o redireccionar los horarios a los médicos correspondientes.
+* `superadmin/SuperAdminDashboard.jsx` y `superadmin/StaffManagement.jsx`: El panel maestro de control. Gestiona la lógica para poder ver a todo el personal, manejar accesos, privilegios y controlar cualquier flujo del sistema de la salud con máximos privilegios de lectura y edición.
+* `shared/CalendarView.jsx` y `shared/PatientsView.jsx`: Interfaces visuales compartidas de tablas y calendarios que cualquier operario (medico, recepcionista) puede observar.
+
+### Componentes de Reutilización General (`src/components/` y `src/components/ui/`)
+La carpeta engloba todo lo que respecta al "Diseño visual repetible".
+* `Sidebar.jsx`: Constituye la representación gráfica y enlaces del "Menú o Barra de Navegación Lateral".
+* `Spinner.jsx`: Provee una simple animación de espera para indicarle al usuario que se están procesando o cargando datos de internet.
+* `Toast.jsx`: Maneja el código de ventanas o notificaciones asincrónicas en formato de alerta o anuncio.
+* `ui/*.tsx`: Esta subcarpeta tiene componentes avanzados con TypeScript y Tailwind en base a Shadcn UI (Avatar, Buttons, Inputs, Dialogs, Popovers, Accordions, Skeleton). El propósito de todo esto es asegurar consistencia en esquemas de diseño y agilizar el armado de nuevas pantallas. 
+
+### Sistema de Interfaz del Calendario Complejo (`src/calendar/`)
+Se nota que esta aplicación le dedica un vasto esfuerzo a las implementaciones de los turnos en un módulo separado.
+* `components/agenda-view/`: Componentes que renderizan citas con lógica de lista ("agenda").
+* `components/month-view/` , `week-and-day-view/` y `year-view/`: Múltiples variaciones del calendario; código diseñado para computar grillas mensuales, cruces de tiempo cronográfico por días / semanas y un mapa panorámico anual de las atenciones.
+* `components/header/`: Integran botones y variables de navegación y búsqueda de especialistas, posibilitando avanzar y retroceder el tiempo o cambiar el profesional sin recargar el sistema.
+* `components/dialogs/`: Códigos de ventanas modales o interactivos. Permiten capturar formularios, y con ello, guardar eventos interactivamente (Nuevo turno, Edición, Detalles).
+* `components/dnd/`: Su lógica aporta "Drag & Drop". Modifica los objetos del estado del calendario mediante el agarre del evento con arrastre visual sobre otras horas (actualizando internamente horas de inicio y finalización).
+* `contexts/calendar-context.tsx`: Administra los estados globales de la sesión del calendario. Es decir, previene que las funciones estén siendo enviadas archivo a archivo mediante "context API" directo.
+* `hooks/use-update-event.ts`: Extrae lógica y comunicación externa para reutilizar el comportamiento que surge a la hora de confirmar una sobreescritura de un turno. 
+
+### Utilidades y Data Requeridas (`src/data/`, `src/hooks/`, `src/lib/`, `src/constants/`)
+* `data/mockData.js`: A falta de una conexión persistente a la BD, aloja arreglos de objetos y "Variables de Simulacro". Contiene listas con información artificial que emula cómo luce la info real (pacientes de pruebas, eventos, fechas, horas, staffs).
+* `hooks/use-disclosure.ts`: Hook personalizado destinado a empaquetar funciones de apertura, toggle y cierre (`isOpen, onOpen, onClose`), optimizando la legibilidad en modales.
+* `lib/utils.ts`: Módulo de funciones matemáticas o manipuladoras de strings exportables.
+* `constants/`: Aloja datos en modo estricto de solo-lectura como los valores inmutables de nombres de guardias u strings largos.
