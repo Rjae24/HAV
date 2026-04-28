@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Plus, AlertTriangle, Heart, User, Phone, Calendar as CalendarIcon, X, Mail, Activity, ClipboardList, CheckCircle, Pencil, Save } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import Spinner from '../../components/Spinner';
@@ -197,13 +197,27 @@ export default function PatientsView({ showToast, userRole }) {
                   <div className="w-20 h-20 rounded-2xl bg-hav-primary text-white flex items-center justify-center font-display font-bold text-3xl shadow-lg shadow-hav-primary/30 flex-shrink-0">
                      {selected.nombre[0]}
                   </div>
-                  <div>
-                     <h2 className="text-2xl font-display font-bold text-hav-text-main mb-1">
-                        {selected.nombre} {selected.apellidos}
-                     </h2>
-                     <span className="inline-block bg-green-100 text-green-700 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide flex items-center gap-1 w-max">
-                        <CheckCircle size={10} /> Registrado
-                     </span>
+                  <div className="flex-1">
+                     <div className="flex justify-between items-start">
+                       <div>
+                         <h2 className="text-2xl font-display font-bold text-hav-text-main mb-1">
+                            {selected.nombre} {selected.apellidos}
+                         </h2>
+                         <span className="inline-block bg-green-100 text-green-700 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide flex items-center gap-1 w-max">
+                            <CheckCircle size={10} /> Registrado
+                         </span>
+                       </div>
+                       
+                       {/* Botón de Edición */}
+                       {(userRole === 'recepcion' || userRole === 'superadmin') && (
+                         <button 
+                           onClick={() => openEditModal(selected)}
+                           className="p-2 text-gray-400 hover:text-hav-primary hover:bg-hav-primary/10 rounded-lg transition-colors flex items-center gap-2 text-sm font-semibold border border-transparent hover:border-hav-primary/20"
+                         >
+                           <Pencil size={16} /> Editar
+                         </button>
+                       )}
+                     </div>
                      
                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4 text-sm">
                         <div className="flex items-center gap-2 text-hav-text-muted"><User size={15} /> V- {selected.cedula}</div>
@@ -220,6 +234,31 @@ export default function PatientsView({ showToast, userRole }) {
                           </div>
                         )}
                      </div>
+
+                     {/* Contacto de Emergencia */}
+                     {(selected.contacto_emergencia_nombre || selected.contacto_emergencia_telefono) && (
+                       <div className="mt-5 p-3 bg-red-50/50 border border-red-100 rounded-xl">
+                         <div className="flex items-center gap-2 text-red-600 font-semibold mb-2 text-xs uppercase tracking-wide">
+                           <AlertTriangle size={14} /> Contacto de Emergencia
+                         </div>
+                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-hav-text-main">
+                           <div>
+                             <span className="font-semibold text-gray-500 text-xs block mb-0.5">Nombre y Parentesco</span> 
+                             {selected.contacto_emergencia_nombre || 'N/A'} {selected.contacto_emergencia_parentesco ? `(${selected.contacto_emergencia_parentesco})` : ''}
+                           </div>
+                           <div>
+                             <span className="font-semibold text-gray-500 text-xs block mb-0.5">Teléfono</span> 
+                             {selected.contacto_emergencia_telefono || 'N/A'}
+                           </div>
+                           {selected.contacto_emergencia_correo && (
+                             <div className="col-span-1 sm:col-span-2">
+                               <span className="font-semibold text-gray-500 text-xs block mb-0.5">Correo</span> 
+                               {selected.contacto_emergencia_correo}
+                             </div>
+                           )}
+                         </div>
+                       </div>
+                     )}
                   </div>
                </div>
 
