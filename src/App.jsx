@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { LogOut } from 'lucide-react';
 
 // Components
@@ -34,8 +34,8 @@ function RouteView({ user, currentView, onNavigate, showToast }) {
 
   // Recepción routes
   if (user.role === 'recepcion') {
-    if (currentView === 'dashboard') return <RecepcionDashboard {...props} />;
-    if (currentView === 'appointments') return <CalendarView {...props} />;
+    if (currentView === 'dashboard') return <CalendarView {...props} userRole={user.role} />;
+    if (currentView === 'appointments') return <CalendarView {...props} userRole={user.role} />;
     if (currentView === 'patients') return <PatientsView {...props} userRole={user.role} />;
   }
 
@@ -54,7 +54,7 @@ function RouteView({ user, currentView, onNavigate, showToast }) {
 // ─── Top Header Bar ──────────────────────────────────────────────────────────
 function TopBar({ user, currentView, onLogout }) {
   const viewLabels = {
-    dashboard: user.role === 'superadmin' ? 'Resumen General' : user.role === 'medico' ? 'Mis Citas' : 'Panel de Recepción',
+    dashboard: user.role === 'superadmin' ? 'Resumen General' : user.role === 'medico' ? 'Mis Citas' : 'Inicio — Calendario de Citas',
     staff: 'Gestión de Personal',
     patients: 'Pacientes',
     appointments: 'Calendario de Citas',
@@ -94,9 +94,20 @@ function TopBar({ user, currentView, onLogout }) {
 
 // ─── App Root ────────────────────────────────────────────────────────────────
 export default function App() {
-  const [currentUser, setCurrentUser] = useState(null);   // null = not logged in
+  const [currentUser, setCurrentUser] = useState(() => {
+    const savedUser = localStorage.getItem('hav_session');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
   const [currentView, setCurrentView] = useState('dashboard');
   const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('hav_session', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('hav_session');
+    }
+  }, [currentUser]);
 
   const showToast = useCallback((t) => {
     setToast(t);

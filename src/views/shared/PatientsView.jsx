@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Search, Plus, AlertTriangle, Heart, User, Phone, Calendar as CalendarIcon, X, Mail, Activity, ClipboardList, CheckCircle } from 'lucide-react';
+﻿import { useState, useEffect } from 'react';
+import { Search, Plus, AlertTriangle, Heart, User, Phone, Calendar as CalendarIcon, X, Mail, Activity, ClipboardList, CheckCircle, Pencil, Save } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import Spinner from '../../components/Spinner';
+import HistorialClinicoPanel from '../../components/HistorialClinicoPanel';
 
 export default function PatientsView({ showToast, userRole }) {
   const [patients, setPatients] = useState([]);
@@ -11,12 +12,13 @@ export default function PatientsView({ showToast, userRole }) {
 
   // Modal State
   const [showAddModal, setShowAddModal] = useState(false);
-  const [form, setForm] = useState({ name: '', apellidos: '', cedula: '', phone: '', email: '', birthDate: '', address: '' });
+  const [form, setForm] = useState({ name: '', apellidos: '', cedula: '', phone: '', email: '', birthDate: '', address: '', genero: '', seguro_medico: '', estado_paciente: 'activo' });
   const [isSaving, setIsSaving] = useState(false);
+
+  // (historial clínico manejado por HistorialClinicoPanel)
 
   const fetchPatients = async () => {
     try {
-      setLoading(true);
 
       // Recepcion only sees contact info + appointment list (no clinical data)
       const selectQuery = userRole === 'recepcion'
@@ -25,7 +27,7 @@ export default function PatientsView({ showToast, userRole }) {
              especialista ( nombre_completo, especialidad )
            )`
         : `id_paciente, nombre, apellidos, cedula, telefono, correo, fecha_nacimiento, direccion,
-           historial_clinico ( tipo_sangre, alergias, patologias, cirugias ),
+           historial_clinico ( id_historial, tipo_sangre, alergias, patologias, cirugias ),
            cita (
              id_cita, fecha_pautada, motivo_consulta, estado,
              especialista ( nombre_completo, especialidad ),
@@ -72,6 +74,9 @@ export default function PatientsView({ showToast, userRole }) {
           correo: form.email,
           fecha_nacimiento: form.birthDate || null,
           direccion: form.address,
+          genero: form.genero || null,
+          seguro_medico: form.seguro_medico || null,
+          estado_paciente: form.estado_paciente || 'activo',
         })
         .select()
         .single();
@@ -93,7 +98,7 @@ export default function PatientsView({ showToast, userRole }) {
 
       if (showToast) showToast({ type: 'success', title: 'Éxito', message: 'Paciente registrado exitosamente' });
       setShowAddModal(false);
-      setForm({ name: '', apellidos: '', cedula: '', phone: '', email: '', birthDate: '', address: '' });
+      setForm({ name: '', apellidos: '', cedula: '', phone: '', email: '', birthDate: '', address: '', genero: '', seguro_medico: '', estado_paciente: 'activo' });
       fetchPatients(); // reload
     } catch (error) {
       console.error(error);
@@ -204,54 +209,37 @@ export default function PatientsView({ showToast, userRole }) {
                         <div className="flex items-center gap-2 text-hav-text-muted"><CalendarIcon size={15} /> Nació: {selected.fecha_nacimiento || 'N/A'}</div>
                         <div className="flex items-center gap-2 text-hav-text-muted"><Phone size={15} /> {selected.telefono || 'N/A'}</div>
                         <div className="flex items-center gap-2 text-hav-text-muted"><Mail size={15} /> {selected.correo || 'N/A'}</div>
+                        {selected.genero && <div className="flex items-center gap-2 text-hav-text-muted"><User size={15} /> {selected.genero}</div>}
+                        {selected.seguro_medico && <div className="flex items-center gap-2 text-hav-text-muted"><Activity size={15} /> Seguro: {selected.seguro_medico}</div>}
+                        {selected.estado_paciente && (
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${selected.estado_paciente === 'activo' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                              {selected.estado_paciente?.toUpperCase()}
+                            </span>
+                          </div>
+                        )}
                      </div>
                   </div>
                </div>
 
                {/* Clinical Details — hidden for recepcion */}
-               <div className="mt-8 space-y-8">
-                  {userRole !== 'recepcion' && (
-                  <div>
-                     <h3 className="font-semibold text-hav-text-main text-lg flex items-center gap-2 mb-4">
-                        <Heart size={18} className="text-hav-primary" /> Historial Base
-                     </h3>
-                     
-                     {(() => {
-                        const history = selected.historial_clinico?.[0] || selected.historial_clinico;
-                        if (!history) return <p className="text-sm text-gray-500">No hay historial registrado.</p>;
-                        
-                        return (
-                           <div className="grid grid-cols-2 gap-4">
-                              <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
-                                 <p className="text-xs text-hav-primary font-bold uppercase tracking-wide mb-1">Tipo de Sangre</p>
-                                 <p className="text-sm font-medium text-hav-text-main">{history.tipo_sangre}</p>
-                              </div>
-                              <div className="bg-red-50 border border-red-100 rounded-xl p-4">
-                                 <p className="text-xs text-hav-danger font-bold uppercase tracking-wide mb-1 flex items-center gap-1">
-                                    <AlertTriangle size={12} /> Alergias
-                                 </p>
-                                 <p className="text-sm font-medium text-red-900">{history.alergias}</p>
-                              </div>
-                              <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 col-span-2 text-sm text-hav-text-main">
-                                 <span className="text-xs text-hav-primary font-bold uppercase tracking-wide block mb-1">Patologías Previas</span>
-                                 {history.patologias}
-                              </div>
-                              <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 col-span-2 text-sm text-hav-text-main">
-                                 <span className="text-xs text-hav-primary font-bold uppercase tracking-wide block mb-1">Cirugías Previas</span>
-                                 {history.cirugias}
-                              </div>
-                           </div>
-                        );
-                     })()}
-                  </div>
-                  )}
 
-                  {/* Recepcion sees only appointment list, no diagnoses */}
-                  {userRole === 'recepcion' && (
-                     <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-xs text-blue-600 font-medium flex items-center gap-2">
-                       <span>ℹ</span> Los datos clínicos son confidenciales y solo visibles para el equipo médico.
-                     </div>
-                  )}
+               {/* Clinical Details � hidden for recepcion */}
+               <div className="mt-8 space-y-8">
+                   {userRole !== 'recepcion' && (
+                     <HistorialClinicoPanel
+                       patient={selected}
+                       showToast={showToast}
+                       onRefresh={() => { fetchPatients(); }}
+                     />
+                   )}
+
+                   {/* Recepcion sees only appointment list, no diagnoses */}
+                   {userRole === 'recepcion' && (
+                      <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-xs text-blue-600 font-medium flex items-center gap-2">
+                        <span>&#8505;</span> Los datos clinicos son confidenciales y solo visibles para el equipo medico.
+                      </div>
+                   )}
 
                   <div>
                      <h3 className="font-semibold text-hav-text-main text-lg flex items-center gap-2 mb-4">
@@ -408,6 +396,29 @@ export default function PatientsView({ showToast, userRole }) {
                     type="email"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-hav-primary focus:ring-1 focus:ring-hav-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-hav-text-main mb-1">Género</label>
+                  <select
+                    value={form.genero}
+                    onChange={(e) => setForm({ ...form, genero: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-hav-primary focus:ring-1 focus:ring-hav-primary"
+                  >
+                    <option value="">— Seleccione —</option>
+                    <option value="Masculino">Masculino</option>
+                    <option value="Femenino">Femenino</option>
+                    <option value="Otro">Otro</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-hav-text-main mb-1">Seguro Médico</label>
+                  <input
+                    type="text"
+                    value={form.seguro_medico}
+                    onChange={(e) => setForm({ ...form, seguro_medico: e.target.value })}
+                    placeholder="Ej: Seguros Caracas, Ninguno"
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-hav-primary focus:ring-1 focus:ring-hav-primary"
                   />
                 </div>

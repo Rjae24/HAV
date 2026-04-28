@@ -6,7 +6,7 @@ import {
 
 const NAV_ITEMS = {
   superadmin: [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'dashboard', label: 'Inicio', icon: LayoutDashboard },
     { id: 'staff', label: 'Personal', icon: Users },
     { id: 'patients', label: 'Pacientes', icon: ClipboardList },
     { id: 'appointments', label: 'Calendario', icon: CalendarDays },
@@ -14,8 +14,7 @@ const NAV_ITEMS = {
     { id: 'settings', label: 'Configuración', icon: Settings },
   ],
   recepcion: [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'appointments', label: 'Calendario', icon: CalendarDays },
+    { id: 'dashboard', label: 'Inicio', icon: LayoutDashboard },
     { id: 'patients', label: 'Pacientes', icon: ClipboardList },
   ],
   medico: [

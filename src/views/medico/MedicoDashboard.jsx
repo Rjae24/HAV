@@ -8,6 +8,7 @@ export default function MedicoDashboard({ user, showToast }) {
   const [selectedAppt, setSelectedAppt] = useState(null);
   
   const [soap, setSoap] = useState({ subjetivo: '', objetivo: '', analisis: '', plan: '' });
+  const [vitals, setVitals] = useState({ tension_arterial: '', frecuencia_cardiaca: '', temperatura: '', saturacion_oxigeno: '', peso: '', imc: '' });
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   
@@ -50,10 +51,10 @@ export default function MedicoDashboard({ user, showToast }) {
 
       // Traer otros especialistas para interconsulta
       const { data: specs } = await supabase
-        .from('usuarios')
+        .from('especialista')
         .select('id_usuario, nombre_completo, especialidad')
-        .eq('rol', 'medico')
-        .neq('id_usuario', user.id);
+        .neq('id_usuario', user.id)
+        .order('nombre_completo');
       
       setSpecialists(specs || []);
 
@@ -119,6 +120,7 @@ export default function MedicoDashboard({ user, showToast }) {
          analisis: '', 
          plan: '' 
       });
+      setVitals({ tension_arterial: '', frecuencia_cardiaca: '', temperatura: '', saturacion_oxigeno: '', peso: '', imc: '' });
     }
   }, [selectedAppt]);
 
@@ -136,9 +138,17 @@ export default function MedicoDashboard({ user, showToast }) {
         .from('consulta')
         .insert({
           id_cita: selectedAppt.id_cita,
+          subjetivo: soap.subjetivo,
+          objetivo: soap.objetivo,
           diagnostico: soap.analisis || 'Pendiente diagnóstico',
           tratamiento: soap.plan || 'Sin tratamiento farmacológico',
-          notas_medicas: notas
+          notas_medicas: `S: ${soap.subjetivo}\nO: ${soap.objetivo}`,
+          tension_arterial: vitals.tension_arterial || null,
+          frecuencia_cardiaca: vitals.frecuencia_cardiaca ? parseInt(vitals.frecuencia_cardiaca) : null,
+          temperatura: vitals.temperatura ? parseFloat(vitals.temperatura) : null,
+          saturacion_oxigeno: vitals.saturacion_oxigeno ? parseFloat(vitals.saturacion_oxigeno) : null,
+          peso: vitals.peso ? parseFloat(vitals.peso) : null,
+          imc: vitals.imc ? parseFloat(vitals.imc) : null,
         });
 
       if (insertErr) throw insertErr;
@@ -149,6 +159,7 @@ export default function MedicoDashboard({ user, showToast }) {
       showToast({ type: 'success', title: '✅ Historia guardada', message: `Consulta registrada correctamente.` });
       
       setSoap({ subjetivo: '', objetivo: '', analisis: '', plan: '' });
+      setVitals({ tension_arterial: '', frecuencia_cardiaca: '', temperatura: '', saturacion_oxigeno: '', peso: '', imc: '' });
       fetchDashboardData(); 
       fetchHistory(selectedAppt.pacientes.id_paciente); 
       
@@ -300,7 +311,7 @@ export default function MedicoDashboard({ user, showToast }) {
                 <div className="space-y-3">
                   {[
                     { key: 'subjetivo', label: 'S · Subjetivo', placeholder: 'Síntomas referidos, interrogatorio...' },
-                    { key: 'objetivo', label: 'O · Objetivo', placeholder: 'Examen físico, signos vitales...' },
+                    { key: 'objetivo', label: 'O · Objetivo', placeholder: 'Examen físico, hallazgos...' },
                     { key: 'analisis', label: 'A · Análisis / Diagnóstico', placeholder: 'Impresión diagnóstica...' },
                     { key: 'plan', label: 'P · Plan / Tratamiento', placeholder: 'Indicaciones médicas, recetas...' },
                   ].map(({ key, label, placeholder }) => (
@@ -316,6 +327,34 @@ export default function MedicoDashboard({ user, showToast }) {
                     </div>
                   ))}
                 </div>
+
+                {/* Signos Vitales */}
+                <div className="mt-4 bg-blue-50/50 border border-blue-100 rounded-xl p-4">
+                  <p className="text-xs font-bold text-blue-700 uppercase tracking-wide mb-3">Signos Vitales (opcional)</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { key: 'tension_arterial', label: 'T/A (mmHg)', placeholder: '120/80', type: 'text' },
+                      { key: 'frecuencia_cardiaca', label: 'F.C. (lpm)', placeholder: '72', type: 'number' },
+                      { key: 'temperatura', label: 'Temp (°C)', placeholder: '36.5', type: 'number' },
+                      { key: 'saturacion_oxigeno', label: 'SpO₂ (%)', placeholder: '98', type: 'number' },
+                      { key: 'peso', label: 'Peso (kg)', placeholder: '70', type: 'number' },
+                      { key: 'imc', label: 'IMC', placeholder: '24.2', type: 'number' },
+                    ].map(({ key, label, placeholder, type }) => (
+                      <div key={key}>
+                        <label className="text-[10px] font-semibold text-blue-600 uppercase block mb-1">{label}</label>
+                        <input
+                          type={type}
+                          step="0.1"
+                          value={vitals[key]}
+                          onChange={(e) => setVitals({ ...vitals, [key]: e.target.value })}
+                          placeholder={placeholder}
+                          className="w-full px-2 py-1.5 bg-white border border-blue-100 rounded-lg text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-300"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 <button
                   onClick={handleSaveSOAP}
                   disabled={saving || !selectedAppt}

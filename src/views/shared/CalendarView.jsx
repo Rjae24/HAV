@@ -55,6 +55,24 @@ function fmt12(hhmm) {
   return `${h12}:${String(m).padStart(2,'0')} ${p}`;
 }
 
+// Generate 30-min slots from available blocks
+function generateSlots(blocks) {
+  const slots = [];
+  blocks.forEach(b => {
+    const [sh, sm] = b.hora_inicio.split(':').map(Number);
+    const [eh, em] = b.hora_fin.split(':').map(Number);
+    let cur = sh * 60 + sm;
+    const end = eh * 60 + em;
+    while (cur + 30 <= end) {
+      const hh = String(Math.floor(cur / 60)).padStart(2, '0');
+      const mm = String(cur % 60).padStart(2, '0');
+      slots.push(`${hh}:${mm}`);
+      cur += 30;
+    }
+  });
+  return slots;
+}
+
 export default function CalendarView({ userRole, showToast }) {
   const today = new Date();
   const [curYear, setCurYear]     = useState(today.getFullYear());
@@ -79,6 +97,8 @@ export default function CalendarView({ userRole, showToast }) {
   const [showNewPatientForm, setShowNewPatientForm] = useState(false);
   const [newPatient, setNewPatient] = useState({ cedula: '', nombre: '', apellidos: '', telefono: '', fecha_nacimiento: '' });
   const [isSavingPatient, setIsSavingPatient] = useState(false);
+  const [cedulaSearch, setCedulaSearch] = useState('');
+  const [foundPatient, setFoundPatient] = useState(null); // {id_paciente, nombre, apellidos, cedula} | 'not_found' | null
 
   const pad = (n) => String(n).padStart(2, '0');
   const selectedDateStr = `${curYear}-${pad(curMonth + 1)}-${pad(selectedDay)}`;
@@ -240,19 +260,17 @@ export default function CalendarView({ userRole, showToast }) {
         // 1. Process payment if provided
         let pagoId = null;
         if (form.monto && Number(form.monto) > 0) {
-          const { data: userData } = await supabase.auth.getUser();
-          const id_usuario = userData.user?.id;
-          if (id_usuario) {
-            const { data: pagoData, error: pagoErr } = await supabase.from('pago').insert([{
-              id_usuario: id_usuario,
-              monto_total: Number(form.monto),
-              metodo_pago: form.metodo_pago,
-              estado: 'completado',
-              fecha_pago: new Date().toISOString()
-            }]).select('id_pago').single();
-            if (pagoErr) throw pagoErr;
-            pagoId = pagoData.id_pago;
-          }
+          // Read current user from localStorage session (custom auth, not Supabase Auth)
+          const session = JSON.parse(localStorage.getItem('hav_session') || 'null');
+          const id_caja = session?.id || null;
+          const { data: pagoData, error: pagoErr } = await supabase.from('pago').insert([{
+            id_caja: id_caja,
+            monto_usd: Number(form.monto),
+            metodo_pago: form.metodo_pago,
+            fecha_pago: new Date().toISOString()
+          }]).select('id_pago').single();
+          if (pagoErr) throw pagoErr;
+          pagoId = pagoData.id_pago;
         }
 
         // 2. Insert Cita
@@ -271,6 +289,8 @@ export default function CalendarView({ userRole, showToast }) {
       setShowModal(false);
       setForm({ patientId: '', time: '', motivo: 'Consulta Nueva', specialistId: '', monto: '', metodo_pago: 'Efectivo', editingId: null });
       setPatientSearch('');
+      setCedulaSearch('');
+      setFoundPatient(null);
       setShowNewPatientForm(false);
       fetchCalendarData();
     } catch (err) {
@@ -422,7 +442,7 @@ export default function CalendarView({ userRole, showToast }) {
                         </p>
                         <p className="text-xs text-gray-400 mt-0.5 italic">{a.motivo_consulta}</p>
 
-                        {/* Actions for recepcion */}
+                        {/* Actions — pendiente: Edit + Confirm + Cancel */}
                         {(userRole === 'recepcion' || userRole === 'superadmin') && a.estado === 'pendiente' && (
                           <div className="flex gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onClick={() => {
@@ -450,6 +470,32 @@ export default function CalendarView({ userRole, showToast }) {
                             </button>
                           </div>
                         )}
+
+                        {/* Actions — confirmada: Edit + Cancel (ya no necesita confirmación) */}
+                        {(userRole === 'recepcion' || userRole === 'superadmin') && a.estado === 'confirmada' && (
+                          <div className="flex gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => {
+                              const d = new Date(a.fecha_pautada);
+                              setCurYear(d.getFullYear()); setCurMonth(d.getMonth()); setSelectedDay(d.getDate());
+                              setForm({
+                                patientId: a.pacientes.id_paciente,
+                                time: d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+                                motivo: a.motivo_consulta || '',
+                                specialistId: a.especialista.id_usuario,
+                                monto: '', metodo_pago: 'Efectivo', editingId: a.id_cita
+                              });
+                              setPatientSearch(''); setShowNewPatientForm(false); setShowModal(true);
+                            }}
+                              className="text-[10px] font-semibold text-hav-primary bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg transition-colors">
+                              Editar
+                            </button>
+                            <button onClick={() => handleCancelAppt(a.id_cita)}
+                              className="text-[10px] font-semibold text-red-600 bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg transition-colors">
+                              Cancelar
+                            </button>
+                          </div>
+                        )}
+
                       </div>
                     </div>
                   );
@@ -473,52 +519,86 @@ export default function CalendarView({ userRole, showToast }) {
 
             <form onSubmit={handleSaveAppt} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
 
-              {/* Patient search */}
+              {/* Patient search by cedula */}
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-xs font-semibold text-hav-text-main">Paciente *</label>
-                  {!form.editingId && (
-                    <button type="button" onClick={() => setShowNewPatientForm(!showNewPatientForm)} className="text-[10px] font-bold text-hav-primary hover:underline">
-                      {showNewPatientForm ? 'Usar paciente existente' : '+ Nuevo paciente rápido'}
-                    </button>
+                  {!form.editingId && foundPatient && foundPatient !== 'not_found' && (
+                    <button type="button" onClick={() => { setFoundPatient(null); setCedulaSearch(''); setForm(f => ({...f, patientId: ''})); }} className="text-[10px] font-bold text-hav-primary hover:underline">Cambiar</button>
                   )}
                 </div>
-                {showNewPatientForm ? (
-                  <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div><label className="text-[10px] text-gray-500">Cédula *</label><input type="text" value={newPatient.cedula} onChange={e=>setNewPatient({...newPatient, cedula: e.target.value})} className="w-full px-2 py-1.5 text-xs border rounded focus:ring-1 focus:ring-hav-primary"/></div>
-                      <div><label className="text-[10px] text-gray-500">Teléfono</label><input type="text" value={newPatient.telefono} onChange={e=>setNewPatient({...newPatient, telefono: e.target.value})} className="w-full px-2 py-1.5 text-xs border rounded focus:ring-1 focus:ring-hav-primary"/></div>
+
+                {/* If editing show patient name read-only */}
+                {form.editingId ? (
+                  <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-hav-text-main">
+                    {patientsList.find(p => p.id_paciente === form.patientId)?.nombre} {patientsList.find(p => p.id_paciente === form.patientId)?.apellidos}
+                  </div>
+                ) : foundPatient && foundPatient !== 'not_found' ? (
+                  /* Patient found card */
+                  <div className="flex items-center gap-3 px-3 py-2.5 bg-green-50 border border-green-200 rounded-xl">
+                    <div className="w-8 h-8 rounded-full bg-hav-primary text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+                      {foundPatient.nombre?.[0]}
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div><label className="text-[10px] text-gray-500">Nombre *</label><input type="text" value={newPatient.nombre} onChange={e=>setNewPatient({...newPatient, nombre: e.target.value})} className="w-full px-2 py-1.5 text-xs border rounded focus:ring-1 focus:ring-hav-primary"/></div>
-                      <div><label className="text-[10px] text-gray-500">Apellidos *</label><input type="text" value={newPatient.apellidos} onChange={e=>setNewPatient({...newPatient, apellidos: e.target.value})} className="w-full px-2 py-1.5 text-xs border rounded focus:ring-1 focus:ring-hav-primary"/></div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-hav-text-main">{foundPatient.nombre} {foundPatient.apellidos}</p>
+                      <p className="text-xs text-hav-text-muted">{foundPatient.cedula}</p>
                     </div>
-                    <div><label className="text-[10px] text-gray-500">F. Nacimiento</label><input type="date" value={newPatient.fecha_nacimiento} onChange={e=>setNewPatient({...newPatient, fecha_nacimiento: e.target.value})} className="w-full px-2 py-1.5 text-xs border rounded focus:ring-1 focus:ring-hav-primary"/></div>
-                    <button type="button" onClick={handleCreatePatient} disabled={isSavingPatient} className="w-full bg-hav-primary text-white text-xs font-bold py-2 rounded shadow-sm flex items-center justify-center gap-1">
-                      {isSavingPatient ? <Spinner size="sm"/> : 'Guardar y Seleccionar Paciente'}
-                    </button>
+                    <CheckCircle size={16} className="text-green-500 flex-shrink-0"/>
                   </div>
                 ) : (
-                  <>
-                    <div className="relative mb-1">
-                      <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"/>
-                      <input type="text" placeholder="Buscar por nombre o cédula…" value={patientSearch}
-                        onChange={e => setPatientSearch(e.target.value)} disabled={!!form.editingId}
-                        className="w-full pl-8 pr-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:border-hav-primary focus:ring-1 focus:ring-hav-primary disabled:bg-gray-100 disabled:opacity-70"
-                      />
+                  /* Cedula search input */
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"/>
+                        <input
+                          type="text" placeholder="Ingrese la cédula del paciente…"
+                          value={cedulaSearch}
+                          onChange={e => setCedulaSearch(e.target.value)}
+                          onKeyDown={async e => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const found = patientsList.find(p => p.cedula?.toLowerCase() === cedulaSearch.trim().toLowerCase());
+                              if (found) { setFoundPatient(found); setForm(f => ({...f, patientId: found.id_paciente})); }
+                              else setFoundPatient('not_found');
+                            }
+                          }}
+                          className="w-full pl-8 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-hav-primary focus:ring-1 focus:ring-hav-primary"
+                        />
+                      </div>
+                      <button type="button"
+                        onClick={() => {
+                          const found = patientsList.find(p => p.cedula?.toLowerCase() === cedulaSearch.trim().toLowerCase());
+                          if (found) { setFoundPatient(found); setForm(f => ({...f, patientId: found.id_paciente})); }
+                          else setFoundPatient('not_found');
+                        }}
+                        className="px-3 py-2 bg-hav-primary text-white text-xs font-bold rounded-lg hover:bg-hav-primary-dark transition-colors"
+                      >Buscar</button>
                     </div>
-                    <select required value={form.patientId} onChange={e => setForm({...form, patientId: e.target.value})} disabled={!!form.editingId}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-hav-primary focus:ring-1 focus:ring-hav-primary disabled:bg-gray-100 disabled:opacity-70"
-                      size={form.editingId ? 1 : Math.min(filteredPatients.length + 1, 5)}
-                    >
-                      <option value="" disabled>— Seleccione —</option>
-                      {filteredPatients.map(p => (
-                        <option key={p.id_paciente} value={p.id_paciente}>
-                          {p.nombre} {p.apellidos} · {p.cedula}
-                        </option>
-                      ))}
-                    </select>
-                  </>
+                    {foundPatient === 'not_found' && (
+                      <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                        <p className="text-xs text-amber-700">No se encontró paciente con esa cédula.</p>
+                        <button type="button" onClick={() => { setFoundPatient(null); setShowNewPatientForm(true); setNewPatient(n => ({...n, cedula: cedulaSearch})); }}
+                          className="text-[10px] font-bold text-hav-primary hover:underline ml-2 whitespace-nowrap">+ Crear nuevo</button>
+                      </div>
+                    )}
+                    {showNewPatientForm && (
+                      <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div><label className="text-[10px] text-gray-500">Cédula *</label><input type="text" value={newPatient.cedula} onChange={e=>setNewPatient({...newPatient, cedula: e.target.value})} className="w-full px-2 py-1.5 text-xs border rounded focus:ring-1 focus:ring-hav-primary"/></div>
+                          <div><label className="text-[10px] text-gray-500">Teléfono</label><input type="text" value={newPatient.telefono} onChange={e=>setNewPatient({...newPatient, telefono: e.target.value})} className="w-full px-2 py-1.5 text-xs border rounded focus:ring-1 focus:ring-hav-primary"/></div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div><label className="text-[10px] text-gray-500">Nombre *</label><input type="text" value={newPatient.nombre} onChange={e=>setNewPatient({...newPatient, nombre: e.target.value})} className="w-full px-2 py-1.5 text-xs border rounded focus:ring-1 focus:ring-hav-primary"/></div>
+                          <div><label className="text-[10px] text-gray-500">Apellidos *</label><input type="text" value={newPatient.apellidos} onChange={e=>setNewPatient({...newPatient, apellidos: e.target.value})} className="w-full px-2 py-1.5 text-xs border rounded focus:ring-1 focus:ring-hav-primary"/></div>
+                        </div>
+                        <div><label className="text-[10px] text-gray-500">F. Nacimiento</label><input type="date" value={newPatient.fecha_nacimiento} onChange={e=>setNewPatient({...newPatient, fecha_nacimiento: e.target.value})} className="w-full px-2 py-1.5 text-xs border rounded focus:ring-1 focus:ring-hav-primary"/></div>
+                        <button type="button" onClick={async () => { await handleCreatePatient(); setShowNewPatientForm(false); }} disabled={isSavingPatient} className="w-full bg-hav-primary text-white text-xs font-bold py-2 rounded shadow-sm flex items-center justify-center gap-1">
+                          {isSavingPatient ? <Spinner size="sm"/> : 'Guardar y Seleccionar Paciente'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -543,11 +623,11 @@ export default function CalendarView({ userRole, showToast }) {
                 📅 Agendando para: {new Date(selectedDateStr + 'T12:00:00').toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}
               </div>
 
-              {/* Available slots */}
+              {/* Time slot picker */}
               {form.specialistId && (
                 <div>
                   <label className="block text-xs font-semibold text-hav-text-main mb-2">
-                    Bloques disponibles ese día {loadingBlocks && <Spinner size="sm" className="inline ml-1"/>}
+                    Hora de la cita * {loadingBlocks && <Spinner size="sm" className="inline ml-1"/>}
                   </label>
                   {!loadingBlocks && availableBlocks.length === 0 ? (
                     <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
@@ -555,31 +635,32 @@ export default function CalendarView({ userRole, showToast }) {
                     </div>
                   ) : (
                     <div className="flex flex-wrap gap-2">
-                      {availableBlocks.map(b => (
-                        <div key={b.id_horario} className="text-[11px] bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-hav-text-muted font-medium">
-                          {fmt12(b.hora_inicio)} – {fmt12(b.hora_fin)}
-                        </div>
+                      {generateSlots(availableBlocks).map(slot => (
+                        <button
+                          key={slot}
+                          type="button"
+                          onClick={() => setForm(f => ({...f, time: slot}))}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                            form.time === slot
+                              ? 'bg-hav-primary text-white border-hav-primary shadow-md shadow-hav-primary/20'
+                              : 'bg-white text-hav-text-main border-gray-200 hover:border-hav-primary hover:text-hav-primary'
+                          }`}
+                        >
+                          {fmt12(slot)}
+                        </button>
                       ))}
                     </div>
                   )}
+                  {form.time && (
+                    <p className="mt-2 text-xs text-hav-primary font-semibold">✓ Hora seleccionada: {fmt12(form.time)}</p>
+                  )}
                 </div>
               )}
-
-              {/* Time input */}
-              <div>
-                <label className="block text-xs font-semibold text-hav-text-main mb-1">Hora de la cita *</label>
-                <input type="time" required value={form.time}
-                  onChange={e => setForm({...form, time: e.target.value})}
-                  className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-hav-primary ${
-                    availabilityWarning ? 'border-red-300 bg-red-50' : 'border-gray-200'
-                  }`}
-                />
-                {availabilityWarning && (
-                  <p className="text-xs text-red-500 mt-1 flex items-center gap-1">
-                    <AlertTriangle size={12}/> {availabilityWarning}
-                  </p>
-                )}
-              </div>
+              {!form.specialistId && (
+                <div className="flex items-center gap-2 text-xs text-gray-400 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
+                  <Clock size={13}/> Seleccione un especialista para ver los horarios disponibles.
+                </div>
+              )}
 
               {/* Motivo */}
               <div>
