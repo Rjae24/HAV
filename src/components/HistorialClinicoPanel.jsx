@@ -130,111 +130,6 @@ export default function HistorialClinicoPanel({ patient, showToast, onRefresh })
     } finally { setSaving(false); }
   };
 
-  // ── VIEW MODE ──
-  const ViewMode = () => (
-    <div className="space-y-4">
-      {/* Tipo de Sangre (viene del paciente) */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
-          <p className="text-xs text-hav-primary font-bold uppercase tracking-wide mb-1">Tipo de Sangre</p>
-          <p className="text-lg font-bold text-hav-text-main">{patient.tipo_sangre || <span className="text-gray-400 font-normal text-sm">No registrado</span>}</p>
-        </div>
-        <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
-          <p className="text-xs text-hav-primary font-bold uppercase tracking-wide mb-1">Cirugías Previas</p>
-          <p className="text-sm text-hav-text-main">{historial?.cirugias || <span className="text-gray-400">Ninguna registrada</span>}</p>
-        </div>
-      </div>
-
-      {/* Alergias */}
-      <div className="bg-red-50 border border-red-100 rounded-xl p-4">
-        <p className="text-xs text-red-500 font-bold uppercase tracking-wide mb-2 flex items-center gap-1"><AlertTriangle size={11}/> Alergias</p>
-        <AlergiasTags historialId={historial?.id_historial} />
-      </div>
-
-      {/* Patologías */}
-      <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
-        <p className="text-xs text-hav-primary font-bold uppercase tracking-wide mb-2">Patologías / Enfermedades Crónicas</p>
-        <PatologiasTags historialId={historial?.id_historial} />
-      </div>
-    </div>
-  );
-
-  // ── EDIT MODE ──
-  const EditMode = () => (
-    <div className="space-y-5">
-      {/* Tipo Sangre — se edita desde el paciente directamente */}
-      <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-xs text-blue-600">
-        ℹ El tipo de sangre se edita en la sección de <strong>datos del paciente</strong>.
-      </div>
-
-      {/* Alergias */}
-      <div>
-        <label className="text-xs font-bold text-red-500 uppercase tracking-wide block mb-2 flex items-center gap-1"><AlertTriangle size={11}/> Alergias</label>
-        <div className="flex flex-wrap gap-1.5 mb-2">
-          {selAlergias.map(a => (
-            <span key={a.id} className="flex items-center gap-1 bg-red-100 text-red-700 text-xs font-semibold px-2.5 py-1 rounded-full">
-              {a.nombre}
-              <button onClick={() => setSelAlergias(prev => prev.filter(x => x.id !== a.id))}><X size={10}/></button>
-            </span>
-          ))}
-        </div>
-        {/* Catálogo existente */}
-        <select onChange={e => {
-          const opt = catAlergias.find(a => a.id_alergia === Number(e.target.value));
-          if (opt && !selAlergias.find(a => a.id === opt.id_alergia)) setSelAlergias(prev => [...prev, { id: opt.id_alergia, nombre: opt.nombre }]);
-          e.target.value = '';
-        }} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white mb-2 focus:ring-1 focus:ring-hav-primary">
-          <option value="">— Seleccionar del catálogo —</option>
-          {catAlergias.map(a => <option key={a.id_alergia} value={a.id_alergia}>{a.nombre}</option>)}
-        </select>
-        {/* Nueva alergia */}
-        <div className="flex gap-2">
-          <input value={newAlergia} onChange={e => setNewAlergia(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddAlergia()}
-            placeholder="Nueva alergia..." className="flex-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-hav-primary" />
-          <button onClick={handleAddAlergia} disabled={addingA} className="px-3 py-1.5 bg-red-500 text-white text-xs font-bold rounded-lg">
-            {addingA ? <Spinner size="sm"/> : <Plus size={12}/>}
-          </button>
-        </div>
-      </div>
-
-      {/* Patologías */}
-      <div>
-        <label className="text-xs font-bold text-hav-primary uppercase tracking-wide block mb-2">Patologías / Enfermedades Crónicas</label>
-        <div className="flex flex-wrap gap-1.5 mb-2">
-          {selPatologias.map(p => (
-            <span key={p.id} className="flex items-center gap-1 bg-blue-100 text-blue-700 text-xs font-semibold px-2.5 py-1 rounded-full">
-              {p.nombre}
-              <button onClick={() => setSelPatologias(prev => prev.filter(x => x.id !== p.id))}><X size={10}/></button>
-            </span>
-          ))}
-        </div>
-        <select onChange={e => {
-          const opt = catPatologias.find(p => p.id_patologia === Number(e.target.value));
-          if (opt && !selPatologias.find(p => p.id === opt.id_patologia)) setSelPatologias(prev => [...prev, { id: opt.id_patologia, nombre: opt.nombre }]);
-          e.target.value = '';
-        }} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white mb-2 focus:ring-1 focus:ring-hav-primary">
-          <option value="">— Seleccionar del catálogo —</option>
-          {catPatologias.map(p => <option key={p.id_patologia} value={p.id_patologia}>{p.nombre}</option>)}
-        </select>
-        <div className="flex gap-2">
-          <input value={newPatologia} onChange={e => setNewPatologia(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddPatologia()}
-            placeholder="Nueva patología..." className="flex-1 px-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-hav-primary" />
-          <button onClick={handleAddPatologia} disabled={addingP} className="px-3 py-1.5 bg-hav-primary text-white text-xs font-bold rounded-lg">
-            {addingP ? <Spinner size="sm"/> : <Plus size={12}/>}
-          </button>
-        </div>
-      </div>
-
-      {/* Cirugías */}
-      <div>
-        <label className="text-xs font-bold text-hav-primary uppercase tracking-wide block mb-1.5">Cirugías Previas</label>
-        <textarea rows={2} value={cirugias} onChange={e => setCirugias(e.target.value)}
-          placeholder="Ej: Apendicectomía (2019), Colecistectomía (2022)..."
-          className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-hav-primary resize-none" />
-      </div>
-    </div>
-  );
-
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
@@ -254,7 +149,112 @@ export default function HistorialClinicoPanel({ patient, showToast, onRefresh })
           </div>
         )}
       </div>
-      {editing ? <EditMode /> : <ViewMode />}
+
+      {editing ? (
+        /* ── EDIT MODE ── */
+        <div className="space-y-5">
+          {/* Tipo Sangre */}
+          <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-xs text-blue-600">
+            ℹ El tipo de sangre se edita en la sección de <strong>datos del paciente</strong>.
+          </div>
+
+          {/* Alergias */}
+          <div>
+            <label className="text-xs font-bold text-red-500 uppercase tracking-wide block mb-2 flex items-center gap-1"><AlertTriangle size={11}/> Alergias</label>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {selAlergias.map(a => (
+                <span key={a.id} className="flex items-center gap-1 bg-red-100 text-red-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+                  {a.nombre}
+                  <button onClick={() => setSelAlergias(prev => prev.filter(x => x.id !== a.id))}><X size={10}/></button>
+                </span>
+              ))}
+            </div>
+            
+            <div className="flex gap-2">
+              <input 
+                list="alergias-suggestions"
+                value={newAlergia} 
+                onChange={e => setNewAlergia(e.target.value)} 
+                onKeyDown={e => e.key === 'Enter' && handleAddAlergia()}
+                placeholder="Escribe para buscar alergias o añade una nueva..." 
+                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-red-300 focus:ring-1 focus:ring-red-300" 
+              />
+              <datalist id="alergias-suggestions">
+                {catAlergias.map(a => <option key={a.id_alergia} value={a.nombre} />)}
+              </datalist>
+              <button onClick={handleAddAlergia} disabled={addingA} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-colors">
+                {addingA ? <Spinner size="sm"/> : <Plus size={16}/>}
+              </button>
+            </div>
+          </div>
+
+          {/* Patologías */}
+          <div>
+            <label className="text-xs font-bold text-hav-primary uppercase tracking-wide block mb-2">Patologías / Enfermedades Crónicas</label>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {selPatologias.map(p => (
+                <span key={p.id} className="flex items-center gap-1 bg-blue-100 text-blue-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+                  {p.nombre}
+                  <button onClick={() => setSelPatologias(prev => prev.filter(x => x.id !== p.id))}><X size={10}/></button>
+                </span>
+              ))}
+            </div>
+            
+            <div className="flex gap-2">
+              <input 
+                list="patologias-suggestions"
+                value={newPatologia} 
+                onChange={e => setNewPatologia(e.target.value)} 
+                onKeyDown={e => e.key === 'Enter' && handleAddPatologia()}
+                placeholder="Escribe para buscar patologías o añade una nueva..." 
+                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-hav-primary focus:ring-1 focus:ring-hav-primary" 
+              />
+              <datalist id="patologias-suggestions">
+                {catPatologias.map(p => <option key={p.id_patologia} value={p.nombre} />)}
+              </datalist>
+              <button onClick={handleAddPatologia} disabled={addingP} className="px-4 py-2 bg-hav-primary hover:bg-hav-primary-dark text-white text-xs font-bold rounded-lg transition-colors">
+                {addingP ? <Spinner size="sm"/> : <Plus size={16}/>}
+              </button>
+            </div>
+          </div>
+
+          {/* Cirugías */}
+          <div>
+            <label className="text-xs font-bold text-hav-primary uppercase tracking-wide block mb-1.5">Cirugías Previas</label>
+            <textarea 
+              rows={2} 
+              value={cirugias} 
+              onChange={e => setCirugias(e.target.value)}
+              placeholder="Ej: Apendicectomía (2019), Colecistectomía (2022)..."
+              className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-hav-primary focus:ring-1 focus:ring-hav-primary resize-none" 
+            />
+          </div>
+        </div>
+      ) : (
+        /* ── VIEW MODE ── */
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
+              <p className="text-xs text-hav-primary font-bold uppercase tracking-wide mb-1">Tipo de Sangre</p>
+              <p className="text-lg font-bold text-hav-text-main">{patient.tipo_sangre || <span className="text-gray-400 font-normal text-sm">No registrado</span>}</p>
+            </div>
+            <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
+              <p className="text-xs text-hav-primary font-bold uppercase tracking-wide mb-1">Cirugías Previas</p>
+              <p className="text-sm text-hav-text-main">{historial?.cirugias || <span className="text-gray-400">Ninguna registrada</span>}</p>
+            </div>
+          </div>
+
+          <div className="bg-red-50 border border-red-100 rounded-xl p-4">
+            <p className="text-xs text-red-500 font-bold uppercase tracking-wide mb-2 flex items-center gap-1"><AlertTriangle size={11}/> Alergias</p>
+            <AlergiasTags historialId={historial?.id_historial} />
+          </div>
+
+          <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
+            <p className="text-xs text-hav-primary font-bold uppercase tracking-wide mb-2">Patologías / Enfermedades Crónicas</p>
+            <PatologiasTags historialId={historial?.id_historial} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
