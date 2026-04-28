@@ -342,14 +342,16 @@ export default function PatientsView({ showToast, userRole }) {
             <form onSubmit={handleSavePatient} className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-hav-text-main mb-1">Cédula *</label>
+                  <label className="block text-xs font-semibold text-hav-text-main mb-1">C\u00e9dula * (solo n\u00fameros)</label>
                   <input
                     required
                     type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     value={form.cedula}
-                    onChange={(e) => setForm({ ...form, cedula: e.target.value })}
+                    onChange={(e) => setForm({ ...form, cedula: e.target.value.replace(/\D/g, "") })}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-hav-primary focus:ring-1 focus:ring-hav-primary"
-                    placeholder="V-25000111"
+                    placeholder="Ej: 25000111"
                   />
                 </div>
                 <div>

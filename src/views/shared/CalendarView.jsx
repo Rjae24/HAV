@@ -595,7 +595,7 @@ export default function CalendarView({ userRole, showToast }) {
                     {showNewPatientForm && (
                       <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 space-y-3">
                         <div className="grid grid-cols-2 gap-3">
-                          <div><label className="text-[10px] text-gray-500">Cédula *</label><input type="text" value={newPatient.cedula} onChange={e=>setNewPatient({...newPatient, cedula: e.target.value})} className="w-full px-2 py-1.5 text-xs border rounded focus:ring-1 focus:ring-hav-primary"/></div>
+                          <div><label className="text-[10px] text-gray-500">Cédula * (solo números)</label><input type="text" inputMode="numeric" pattern="[0-9]*" value={newPatient.cedula} onChange={e=>setNewPatient({...newPatient, cedula: e.target.value.replace(/\D/g,'')})} placeholder="Ej: 25000111" className="w-full px-2 py-1.5 text-xs border rounded focus:ring-1 focus:ring-hav-primary"/></div>
                           <div><label className="text-[10px] text-gray-500">Teléfono</label><input type="text" value={newPatient.telefono} onChange={e=>setNewPatient({...newPatient, telefono: e.target.value})} className="w-full px-2 py-1.5 text-xs border rounded focus:ring-1 focus:ring-hav-primary"/></div>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
