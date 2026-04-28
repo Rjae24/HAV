@@ -60,46 +60,83 @@ export default function PatientsView({ showToast, userRole }) {
     fetchPatients();
   }, []);
 
+  const openEditModal = (patient) => {
+    setEditPatientId(patient.id_paciente);
+    setForm({
+      name: patient.nombre || '',
+      apellidos: patient.apellidos || '',
+      cedula: patient.cedula || '',
+      phone: patient.telefono || '',
+      email: patient.correo || '',
+      birthDate: patient.fecha_nacimiento || '',
+      address: patient.direccion || '',
+      genero: patient.genero || '',
+      seguro_medico: patient.seguro_medico || '',
+      estado_paciente: patient.estado_paciente || 'activo',
+      contacto_emergencia_nombre: patient.contacto_emergencia_nombre || '',
+      contacto_emergencia_telefono: patient.contacto_emergencia_telefono || '',
+      contacto_emergencia_correo: patient.contacto_emergencia_correo || '',
+      contacto_emergencia_parentesco: patient.contacto_emergencia_parentesco || ''
+    });
+    setShowAddModal(true);
+  };
+
+  const closeAddModal = () => {
+    setShowAddModal(false);
+    setEditPatientId(null);
+    setForm({ name: '', apellidos: '', cedula: '', phone: '', email: '', birthDate: '', address: '', genero: '', seguro_medico: '', estado_paciente: 'activo', contacto_emergencia_nombre: '', contacto_emergencia_telefono: '', contacto_emergencia_correo: '', contacto_emergencia_parentesco: '' });
+  };
+
   const handleSavePatient = async (e) => {
     e.preventDefault();
     setIsSaving(true);
     try {
-      // 1. Insert patient
-      const { data: pData, error: pErr } = await supabase
-        .from('pacientes')
-        .insert({
-          nombre: form.name,
-          apellidos: form.apellidos,
-          cedula: form.cedula,
-          telefono: form.phone,
-          correo: form.email,
-          fecha_nacimiento: form.birthDate || null,
-          direccion: form.address,
-          genero: form.genero || null,
-          seguro_medico: form.seguro_medico || null,
-          estado_paciente: form.estado_paciente || 'activo',
-        })
-        .select()
-        .single();
+      const payload = {
+        nombre: form.name,
+        apellidos: form.apellidos,
+        cedula: form.cedula,
+        telefono: form.phone,
+        correo: form.email,
+        fecha_nacimiento: form.birthDate || null,
+        direccion: form.address,
+        genero: form.genero || null,
+        seguro_medico: form.seguro_medico || null,
+        estado_paciente: form.estado_paciente || 'activo',
+        contacto_emergencia_nombre: form.contacto_emergencia_nombre || null,
+        contacto_emergencia_telefono: form.contacto_emergencia_telefono || null,
+        contacto_emergencia_correo: form.contacto_emergencia_correo || null,
+        contacto_emergencia_parentesco: form.contacto_emergencia_parentesco || null,
+      };
 
-      if (pErr) throw pErr;
+      if (editPatientId) {
+        // Edit mode
+        const { error: updErr } = await supabase.from('pacientes').update(payload).eq('id_paciente', editPatientId);
+        if (updErr) throw updErr;
+        if (showToast) showToast({ type: 'success', title: 'Éxito', message: 'Paciente actualizado exitosamente' });
+        
+        // Update selected patient if it is the one being edited
+        if (selected && selected.id_paciente === editPatientId) {
+          setSelected({ ...selected, ...payload });
+        }
+      } else {
+        // Insert mode
+        const { data: pData, error: pErr } = await supabase.from('pacientes').insert(payload).select().single();
+        if (pErr) throw pErr;
 
-      // 2. Init clinical history empty
-      const { error: hErr } = await supabase
-        .from('historial_clinico')
-        .insert({
+        // Init clinical history empty
+        const { error: hErr } = await supabase.from('historial_clinico').insert({
           id_paciente: pData.id_paciente,
           tipo_sangre: 'Desconocido',
           alergias: 'Ninguna',
           patologias: 'Ninguna',
           cirugias: 'Ninguna',
         });
+        if (hErr) console.warn('Error inicializando historial:', hErr); // No bloqueante
 
-      if (hErr) console.warn('Error inicializando historial:', hErr); // No bloqueante
+        if (showToast) showToast({ type: 'success', title: 'Éxito', message: 'Paciente registrado exitosamente' });
+      }
 
-      if (showToast) showToast({ type: 'success', title: 'Éxito', message: 'Paciente registrado exitosamente' });
-      setShowAddModal(false);
-      setForm({ name: '', apellidos: '', cedula: '', phone: '', email: '', birthDate: '', address: '', genero: '', seguro_medico: '', estado_paciente: 'activo', contacto_emergencia_nombre: '', contacto_emergencia_telefono: '', contacto_emergencia_correo: '', contacto_emergencia_parentesco: '' });
+      closeAddModal();
       fetchPatients(); // reload
     } catch (error) {
       console.error(error);
@@ -139,7 +176,11 @@ export default function PatientsView({ showToast, userRole }) {
           </div>
           {(userRole === 'recepcion' || userRole === 'superadmin') && (
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={() => {
+                setEditPatientId(null);
+                setForm({ name: '', apellidos: '', cedula: '', phone: '', email: '', birthDate: '', address: '', genero: '', seguro_medico: '', estado_paciente: 'activo', contacto_emergencia_nombre: '', contacto_emergencia_telefono: '', contacto_emergencia_correo: '', contacto_emergencia_parentesco: '' });
+                setShowAddModal(true);
+              }}
               className="flex items-center gap-2 bg-hav-primary hover:bg-hav-primary-dark text-white px-4 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-md shadow-hav-primary/20 whitespace-nowrap"
             >
               <Plus size={16} /> Agregar Paciente
@@ -369,10 +410,11 @@ export default function PatientsView({ showToast, userRole }) {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
               <h3 className="font-semibold text-hav-text-main flex items-center gap-2">
-                <Plus size={18} className="text-hav-primary" /> Agregar Nuevo Paciente
+                {editPatientId ? <Pencil size={18} className="text-hav-primary" /> : <Plus size={18} className="text-hav-primary" />} 
+                {editPatientId ? 'Editar Paciente' : 'Agregar Nuevo Paciente'}
               </h3>
               <button
-                onClick={() => setShowAddModal(false)}
+                onClick={closeAddModal}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
               >
                 <X size={20} />
@@ -466,10 +508,32 @@ export default function PatientsView({ showToast, userRole }) {
                 </div>
               </div>
 
+              <div className="border-t border-gray-100 pt-4 mt-4">
+                <h4 className="text-sm font-semibold text-hav-primary mb-3">Contacto de Emergencia</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-hav-text-main mb-1">Nombre del Contacto</label>
+                    <input type="text" value={form.contacto_emergencia_nombre} onChange={(e) => setForm({...form, contacto_emergencia_nombre: e.target.value})} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-hav-primary focus:ring-1 focus:ring-hav-primary" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-hav-text-main mb-1">Parentesco</label>
+                    <input type="text" value={form.contacto_emergencia_parentesco} onChange={(e) => setForm({...form, contacto_emergencia_parentesco: e.target.value})} placeholder="Ej: Madre, Esposo..." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-hav-primary focus:ring-1 focus:ring-hav-primary" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-hav-text-main mb-1">Teléfono</label>
+                    <input type="text" value={form.contacto_emergencia_telefono} onChange={(e) => setForm({...form, contacto_emergencia_telefono: e.target.value})} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-hav-primary focus:ring-1 focus:ring-hav-primary" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-hav-text-main mb-1">Correo (Opcional)</label>
+                    <input type="email" value={form.contacto_emergencia_correo} onChange={(e) => setForm({...form, contacto_emergencia_correo: e.target.value})} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-hav-primary focus:ring-1 focus:ring-hav-primary" />
+                  </div>
+                </div>
+              </div>
+
               <div className="pt-4 mt-2 flex justify-end gap-3 border-t border-gray-100">
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
+                  onClick={closeAddModal}
                   className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 rounded-lg transition-colors border border-gray-200"
                 >
                   Cancelar
@@ -479,7 +543,7 @@ export default function PatientsView({ showToast, userRole }) {
                   disabled={isSaving}
                   className="px-4 py-2 text-sm font-semibold text-white bg-hav-primary hover:bg-hav-primary-dark rounded-lg transition-colors shadow-sm disabled:opacity-70 flex items-center gap-2"
                 >
-                  {isSaving ? <Spinner size="sm" /> : 'Guardar Paciente'}
+                  {isSaving ? <Spinner size="sm" /> : (editPatientId ? 'Actualizar Paciente' : 'Guardar Paciente')}
                 </button>
               </div>
             </form>
