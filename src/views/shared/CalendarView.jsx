@@ -93,6 +93,7 @@ export default function CalendarView({ userRole, showToast }) {
   const [availabilityWarning, setAvailabilityWarning] = useState('');
 
   const [form, setForm]     = useState({ patientId: '', time: '', motivo: 'Consulta Nueva', specialistId: '', monto: '', metodo_pago: 'Efectivo', editingId: null });
+  const [editDate, setEditDate] = useState(''); // used only in edit mode — overrides selectedDateStr
   const [isSaving, setIsSaving] = useState(false);
   const [showNewPatientForm, setShowNewPatientForm] = useState(false);
   const [newPatient, setNewPatient] = useState({ cedula: '', nombre: '', apellidos: '', telefono: '', fecha_nacimiento: '' });
@@ -154,23 +155,26 @@ export default function CalendarView({ userRole, showToast }) {
 
   useEffect(() => { fetchCalendarData(); fetchDropdowns(); }, []);
 
-  // When specialist or date changes, reload blocks
+  // Active date: edit mode uses editDate, create mode uses selectedDateStr
+  const activeDateStr = form.editingId && editDate ? editDate : selectedDateStr;
+
+  // When specialist or active date changes, reload blocks
   useEffect(() => {
-    if (form.specialistId) fetchBlocks(form.specialistId, selectedDateStr);
+    if (form.specialistId) fetchBlocks(form.specialistId, activeDateStr);
     else setAvailableBlocks([]);
     setAvailabilityWarning('');
     setForm(f => ({ ...f, time: '' }));
-  }, [form.specialistId, selectedDateStr]);
+  }, [form.specialistId, activeDateStr]);
 
   // Validate time when it changes
   useEffect(() => {
     if (!form.time || !form.specialistId) { setAvailabilityWarning(''); return; }
-    if (!isWithinBlock(availableBlocks, selectedDateStr, form.time)) {
+    if (!isWithinBlock(availableBlocks, activeDateStr, form.time)) {
       setAvailabilityWarning('⚠ El especialista no tiene disponibilidad en ese horario.');
     } else {
       setAvailabilityWarning('');
     }
-  }, [form.time, availableBlocks, selectedDateStr, form.specialistId]);
+  }, [form.time, availableBlocks, activeDateStr, form.specialistId]);
 
   // ── Navigation ────────────────────────────────────────────────────────────
   const handlePrev = () => {
@@ -244,12 +248,13 @@ export default function CalendarView({ userRole, showToast }) {
     }
     setIsSaving(true);
     try {
-      const fullDate = `${selectedDateStr}T${form.time}:00`;
+      const dateForSave = form.editingId && editDate ? editDate : selectedDateStr;
+      const fullDate = `${dateForSave}T${form.time}:00`;
       
       if (form.editingId) {
         // UPDATE Existing
         const { error } = await supabase.from('cita').update({
-          id_especialista: form.specialistId,
+          id_especialista: Number(form.specialistId),
           fecha_pautada: fullDate,
           motivo_consulta: form.motivo
         }).eq('id_cita', form.editingId);
@@ -288,6 +293,7 @@ export default function CalendarView({ userRole, showToast }) {
 
       setShowModal(false);
       setForm({ patientId: '', time: '', motivo: 'Consulta Nueva', specialistId: '', monto: '', metodo_pago: 'Efectivo', editingId: null });
+      setEditDate('');
       setPatientSearch('');
       setCedulaSearch('');
       setFoundPatient(null);
@@ -447,12 +453,14 @@ export default function CalendarView({ userRole, showToast }) {
                           <div className="flex gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onClick={() => {
                               const d = new Date(a.fecha_pautada);
-                              setCurYear(d.getFullYear()); setCurMonth(d.getMonth()); setSelectedDay(d.getDate());
+                              const pad = n => String(n).padStart(2,'0');
+                              const dStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+                              setEditDate(dStr);
                               setForm({
                                 patientId: a.pacientes.id_paciente,
                                 time: d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
                                 motivo: a.motivo_consulta || '',
-                                specialistId: a.especialista.id_usuario,
+                                specialistId: String(a.especialista.id_usuario),
                                 monto: '', metodo_pago: 'Efectivo', editingId: a.id_cita
                               });
                               setPatientSearch(''); setShowNewPatientForm(false); setShowModal(true);
@@ -476,12 +484,14 @@ export default function CalendarView({ userRole, showToast }) {
                           <div className="flex gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onClick={() => {
                               const d = new Date(a.fecha_pautada);
-                              setCurYear(d.getFullYear()); setCurMonth(d.getMonth()); setSelectedDay(d.getDate());
+                              const pad = n => String(n).padStart(2,'0');
+                              const dStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+                              setEditDate(dStr);
                               setForm({
                                 patientId: a.pacientes.id_paciente,
                                 time: d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
                                 motivo: a.motivo_consulta || '',
-                                specialistId: a.especialista.id_usuario,
+                                specialistId: String(a.especialista.id_usuario),
                                 monto: '', metodo_pago: 'Efectivo', editingId: a.id_cita
                               });
                               setPatientSearch(''); setShowNewPatientForm(false); setShowModal(true);
@@ -618,10 +628,22 @@ export default function CalendarView({ userRole, showToast }) {
                 </select>
               </div>
 
-              {/* Date info */}
-              <div className="bg-hav-primary/5 border border-hav-primary/20 rounded-xl px-4 py-3 text-xs text-hav-primary font-semibold">
-                📅 Agendando para: {new Date(selectedDateStr + 'T12:00:00').toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}
-              </div>
+              {/* Date — editable in edit mode, info-only in create mode */}
+              {form.editingId ? (
+                <div>
+                  <label className="block text-xs font-semibold text-hav-text-main mb-1">📅 Nueva fecha *</label>
+                  <input
+                    type="date"
+                    value={editDate}
+                    onChange={e => { setEditDate(e.target.value); setForm(f => ({ ...f, time: '' })); }}
+                    className="w-full px-3 py-2 border border-hav-primary/40 bg-hav-primary/5 rounded-xl text-sm font-semibold text-hav-primary focus:outline-none focus:border-hav-primary focus:ring-1 focus:ring-hav-primary"
+                  />
+                </div>
+              ) : (
+                <div className="bg-hav-primary/5 border border-hav-primary/20 rounded-xl px-4 py-3 text-xs text-hav-primary font-semibold">
+                  📅 Agendando para: {new Date(selectedDateStr + 'T12:00:00').toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}
+                </div>
+              )}
 
               {/* Time slot picker */}
               {form.specialistId && (
