@@ -12,7 +12,8 @@ export default function PatientsView({ showToast, userRole }) {
 
   // Modal State
   const [showAddModal, setShowAddModal] = useState(false);
-  const [form, setForm] = useState({ name: '', apellidos: '', cedula: '', phone: '', email: '', birthDate: '', address: '', genero: '', seguro_medico: '', estado_paciente: 'activo' });
+  const [editPatientId, setEditPatientId] = useState(null);
+  const [form, setForm] = useState({ name: '', apellidos: '', cedula: '', phone: '', email: '', birthDate: '', address: '', genero: '', seguro_medico: '', estado_paciente: 'activo', contacto_emergencia_nombre: '', contacto_emergencia_telefono: '', contacto_emergencia_correo: '', contacto_emergencia_parentesco: '' });
   const [isSaving, setIsSaving] = useState(false);
 
   // (historial clínico manejado por HistorialClinicoPanel)
@@ -22,11 +23,11 @@ export default function PatientsView({ showToast, userRole }) {
 
       // Recepcion only sees contact info + appointment list (no clinical data)
       const selectQuery = userRole === 'recepcion'
-        ? `id_paciente, nombre, apellidos, cedula, telefono, correo, fecha_nacimiento, direccion,
+        ? `id_paciente, nombre, apellidos, cedula, telefono, correo, fecha_nacimiento, direccion, genero, seguro_medico, estado_paciente, tipo_sangre, contacto_emergencia_nombre, contacto_emergencia_telefono, contacto_emergencia_correo, contacto_emergencia_parentesco,
            cita ( id_cita, fecha_pautada, motivo_consulta, estado,
              especialista ( nombre_completo, especialidad )
            )`
-        : `id_paciente, nombre, apellidos, cedula, telefono, correo, fecha_nacimiento, direccion,
+        : `id_paciente, nombre, apellidos, cedula, telefono, correo, fecha_nacimiento, direccion, genero, seguro_medico, estado_paciente, tipo_sangre, contacto_emergencia_nombre, contacto_emergencia_telefono, contacto_emergencia_correo, contacto_emergencia_parentesco,
            historial_clinico ( id_historial, tipo_sangre, alergias, patologias, cirugias ),
            cita (
              id_cita, fecha_pautada, motivo_consulta, estado,
@@ -98,7 +99,7 @@ export default function PatientsView({ showToast, userRole }) {
 
       if (showToast) showToast({ type: 'success', title: 'Éxito', message: 'Paciente registrado exitosamente' });
       setShowAddModal(false);
-      setForm({ name: '', apellidos: '', cedula: '', phone: '', email: '', birthDate: '', address: '', genero: '', seguro_medico: '', estado_paciente: 'activo' });
+      setForm({ name: '', apellidos: '', cedula: '', phone: '', email: '', birthDate: '', address: '', genero: '', seguro_medico: '', estado_paciente: 'activo', contacto_emergencia_nombre: '', contacto_emergencia_telefono: '', contacto_emergencia_correo: '', contacto_emergencia_parentesco: '' });
       fetchPatients(); // reload
     } catch (error) {
       console.error(error);
@@ -449,3 +450,6 @@ export default function PatientsView({ showToast, userRole }) {
     </div>
   );
 }
+
+
+
