@@ -19,6 +19,7 @@ export default function HistorialClinicoPanel({ patient, showToast, onRefresh })
 
   // Formulario
   const [cirugias, setCirugias]   = useState('');
+  const [tipoSangre, setTipoSangre] = useState('');
   const [newAlergia, setNewAlergia]     = useState('');
   const [newPatologia, setNewPatologia] = useState('');
   const [addingA, setAddingA]     = useState(false);
@@ -48,6 +49,7 @@ export default function HistorialClinicoPanel({ patient, showToast, onRefresh })
 
   const openEdit = async () => {
     setCirugias(historial?.cirugias || '');
+    setTipoSangre(historial?.tipo_sangre || 'Desconocido');
     await Promise.all([loadCatalogs(), loadSelected()]);
     setEditing(true);
   };
@@ -103,9 +105,9 @@ export default function HistorialClinicoPanel({ patient, showToast, onRefresh })
 
       // Upsert historial_clinico
       if (id_historial) {
-        await supabase.from('historial_clinico').update({ cirugias: cirugias || null, ultima_actualizacion: new Date().toISOString() }).eq('id_historial', id_historial);
+        await supabase.from('historial_clinico').update({ cirugias: cirugias || null, tipo_sangre: tipoSangre, ultima_actualizacion: new Date().toISOString() }).eq('id_historial', id_historial);
       } else {
-        const { data } = await supabase.from('historial_clinico').insert({ id_paciente: patient.id_paciente, cirugias: cirugias || null }).select('id_historial').single();
+        const { data } = await supabase.from('historial_clinico').insert({ id_paciente: patient.id_paciente, cirugias: cirugias || null, tipo_sangre: tipoSangre }).select('id_historial').single();
         id_historial = data.id_historial;
       }
 
@@ -154,8 +156,16 @@ export default function HistorialClinicoPanel({ patient, showToast, onRefresh })
         /* ── EDIT MODE ── */
         <div className="space-y-5">
           {/* Tipo Sangre */}
-          <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-xs text-blue-600">
-            ℹ El tipo de sangre se edita en la sección de <strong>datos del paciente</strong>.
+          <div>
+            <label className="text-xs font-bold text-red-500 uppercase tracking-wide block mb-2 flex items-center gap-1"><Heart size={11}/> Tipo de Sangre</label>
+            <select 
+              value={tipoSangre} 
+              onChange={e => setTipoSangre(e.target.value)}
+              className="w-full sm:w-1/2 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-red-300 focus:ring-1 focus:ring-red-300"
+            >
+              <option value="Desconocido">Desconocido</option>
+              {BLOOD_TYPES.map(bt => <option key={bt} value={bt}>{bt}</option>)}
+            </select>
           </div>
 
           {/* Alergias */}
@@ -236,7 +246,7 @@ export default function HistorialClinicoPanel({ patient, showToast, onRefresh })
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
               <p className="text-xs text-hav-primary font-bold uppercase tracking-wide mb-1">Tipo de Sangre</p>
-              <p className="text-lg font-bold text-hav-text-main">{patient.tipo_sangre || <span className="text-gray-400 font-normal text-sm">No registrado</span>}</p>
+              <p className="text-lg font-bold text-hav-text-main">{historial?.tipo_sangre && historial.tipo_sangre !== 'Desconocido' ? historial.tipo_sangre : <span className="text-gray-400 font-normal text-sm">No registrado</span>}</p>
             </div>
             <div className="bg-gray-50 border border-gray-100 rounded-xl p-4">
               <p className="text-xs text-hav-primary font-bold uppercase tracking-wide mb-1">Cirugías Previas</p>
