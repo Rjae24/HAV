@@ -35,11 +35,12 @@ const from24h = (t) => {
   return { hour: String(h), minute: mStr || '00', period };
 };
 
-// Mini Calendar component
-function MiniCalendar({ selected, onSelect }) {
+// Mini Calendar component for multiple selection
+function MiniCalendar({ selectedDates = [], onToggle }) {
   const today = new Date();
   const [view, setView] = useState(() => {
-    const d = selected ? new Date(selected + 'T00:00:00') : today;
+    const lastSelected = selectedDates[selectedDates.length - 1];
+    const d = lastSelected ? new Date(lastSelected + 'T00:00:00') : today;
     return { month: d.getMonth(), year: d.getFullYear() };
   });
 
@@ -69,19 +70,22 @@ function MiniCalendar({ selected, onSelect }) {
           if (!d) return <div key={`e-${i}`} />;
           const iso = isoDate(d);
           const isToday = iso === today.toISOString().slice(0,10);
-          const isSel   = iso === selected;
+          const isSel   = selectedDates.includes(iso);
           return (
             <button
               key={iso} type="button"
-              onClick={() => onSelect(iso)}
+              onClick={() => onToggle(iso)}
               className={`m-0.5 text-xs rounded-lg py-1 font-medium transition-colors ${
-                isSel   ? 'bg-hav-primary text-white' :
+                isSel   ? 'bg-red-500 text-white' :
                 isToday ? 'bg-hav-primary/10 text-hav-primary font-bold' :
                           'hover:bg-gray-100 text-hav-text-main'
               }`}
             >{d}</button>
           );
         })}
+      </div>
+      <div className="px-3 py-2 bg-gray-50 border-t border-gray-100">
+        <p className="text-[10px] text-gray-400 italic text-center">Toca los días para seleccionarlos/deseleccionarlos</p>
       </div>
     </div>
   );
@@ -118,9 +122,8 @@ export function StaffDetailPanel({ member, showToast, onStatusToggle, onEdit }) 
   const [horarios, setHorarios] = useState([]);
   const [loadingH, setLoadingH] = useState(true);
   const [showHorarioForm, setShowHorarioForm] = useState(false);
-  const [savingH, setSavingH] = useState(false);
   const today = new Date().toISOString().slice(0,10);
-  const [selectedDate, setSelectedDate] = useState(today);
+  const [selectedDates, setSelectedDates] = useState([today]);
   const [inicioT, setInicioT] = useState({ hour:'8', minute:'00', period:'AM' });
   const [finT,    setFinT]    = useState({ hour:'12', minute:'00', period:'PM' });
 
@@ -138,14 +141,15 @@ export function StaffDetailPanel({ member, showToast, onStatusToggle, onEdit }) 
 
   useEffect(() => {
     setShowHorarioForm(false);
+    setSelectedDates([today]);
     if (member.roleId === '2') fetchHorarios();
     else setLoadingH(false);
   }, [member.id]);
 
   const handleAddHorario = async (e) => {
     e.preventDefault();
-    if (!selectedDate) {
-      showToast?.({ type: 'error', title: 'Fecha requerida', message: 'Selecciona un día en el calendario' });
+    if (selectedDates.length === 0) {
+      showToast?.({ type: 'error', title: 'Fecha requerida', message: 'Selecciona al menos un día en el calendario' });
       return;
     }
     const hi = to24h(inicioT);
@@ -155,24 +159,35 @@ export function StaffDetailPanel({ member, showToast, onStatusToggle, onEdit }) 
       return;
     }
     setSavingH(true);
-    const dow  = new Date(selectedDate + 'T12:00:00').getDay();
-    const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-    const { error } = await supabase.from('horario_especialista').insert({
-      id_usuario:  member.id,
-      fecha:       selectedDate,
-      dia_semana:  dias[dow],
-      hora_inicio: hi,
-      hora_fin:    hf,
-    });
-    if (error) {
-      showToast?.({ type: 'error', title: 'Error', message: 'No se pudo agregar. ¿Ya existe ese bloque?' });
-    } else {
-      const label = new Date(selectedDate + 'T12:00:00').toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' });
-      showToast?.({ type: 'success', title: 'Jornada Registrada', message: `Bloque del ${label} guardado` });
-      setShowHorarioForm(false);
-      fetchHorarios();
+    try {
+      const inserts = selectedDates.map(date => {
+        const dow  = new Date(date + 'T12:00:00').getDay();
+        const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+        return {
+          id_usuario:  member.id,
+          fecha:       date,
+          dia_semana:  dias[dow],
+          hora_inicio: hi,
+          hora_fin:    hf,
+        };
+      });
+
+      const { error } = await supabase.from('horario_especialista').insert(inserts);
+      
+      if (error) {
+        showToast?.({ type: 'error', title: 'Error', message: 'No se pudieron agregar algunos bloques. ¿Ya existen?' });
+      } else {
+        showToast?.({ type: 'success', title: 'Bloqueos Registrados', message: `${selectedDates.length} días marcados como no laborables` });
+        setShowHorarioForm(false);
+        setSelectedDates([today]);
+        fetchHorarios();
+      }
+    } catch (err) {
+      console.error(err);
+      showToast?.({ type: 'error', title: 'Error Fatal', message: 'Ocurrió un error al guardar los bloqueos' });
+    } finally {
+      setSavingH(false);
     }
-    setSavingH(false);
   };
 
   const handleDeleteHorario = async (id_horario) => {
@@ -275,15 +290,18 @@ export function StaffDetailPanel({ member, showToast, onStatusToggle, onEdit }) 
           </div>
 
           {showHorarioForm && (
-            <form onSubmit={handleAddHorario} className="mb-4 bg-red-50/50 border border-red-200 rounded-xl p-4 space-y-4">
-              <p className="text-xs font-bold text-red-600 uppercase tracking-wide">Nuevo Bloqueo (No Laborable)</p>
+            <form onSubmit={handleAddHorario} className="mb-4 bg-red-50/50 border border-red-200 rounded-xl p-4 space-y-4 animate-in fade-in slide-in-from-top-2">
+              <p className="text-xs font-bold text-red-600 uppercase tracking-wide">Nuevo Bloqueo (Múltiples Días)</p>
               <div>
                 <label className="text-[10px] font-bold text-hav-text-muted uppercase block mb-2">
-                  Día a bloquear: {selectedDate
-                    ? new Date(selectedDate+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'})
-                    : 'Ninguno'}
+                  Días seleccionados: {selectedDates.length}
                 </label>
-                <MiniCalendar selected={selectedDate} onSelect={setSelectedDate} />
+                <MiniCalendar 
+                  selectedDates={selectedDates} 
+                  onToggle={(iso) => {
+                    setSelectedDates(prev => prev.includes(iso) ? prev.filter(d => d !== iso) : [...prev, iso]);
+                  }} 
+                />
               </div>
               <div className="grid grid-cols-2 gap-3 pt-1">
                 <TimePicker label="Desde las..." value={inicioT} onChange={setInicioT} />
