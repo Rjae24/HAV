@@ -122,6 +122,7 @@ export function StaffDetailPanel({ member, showToast, onStatusToggle, onEdit }) 
   const [horarios, setHorarios] = useState([]);
   const [loadingH, setLoadingH] = useState(true);
   const [showHorarioForm, setShowHorarioForm] = useState(false);
+  const [savingH, setSavingH] = useState(false);
   const today = new Date().toISOString().slice(0,10);
   const [selectedDates, setSelectedDates] = useState([today]);
   const [inicioT, setInicioT] = useState({ hour:'8', minute:'00', period:'AM' });
