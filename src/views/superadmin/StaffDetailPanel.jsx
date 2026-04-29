@@ -266,43 +266,44 @@ export function StaffDetailPanel({ member, showToast, onStatusToggle, onEdit }) 
         <div>
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-hav-text-main flex items-center gap-2">
-              <CalendarDays size={17} className="text-hav-primary" /> Bloques de Horario
+              <CalendarDays size={17} className="text-hav-danger" /> Bloqueos de Disponibilidad (Días No Laborables)
             </h3>
             <button onClick={() => setShowHorarioForm(v => !v)}
-              className="flex items-center gap-1.5 text-xs font-semibold text-hav-primary bg-hav-primary/10 hover:bg-hav-primary/20 px-3 py-1.5 rounded-lg transition-colors">
-              <Plus size={13} /> {showHorarioForm ? 'Cancelar' : 'Agregar Bloque'}
+              className="flex items-center gap-1.5 text-xs font-semibold text-hav-danger bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors border border-red-200">
+              <Plus size={13} /> {showHorarioForm ? 'Cancelar' : 'Bloquear Horario'}
             </button>
           </div>
 
           {showHorarioForm && (
-            <form onSubmit={handleAddHorario} className="mb-4 bg-hav-primary/5 border border-hav-primary/20 rounded-xl p-4 space-y-4">
-              <p className="text-xs font-bold text-hav-primary uppercase tracking-wide">Nueva Jornada</p>
+            <form onSubmit={handleAddHorario} className="mb-4 bg-red-50/50 border border-red-200 rounded-xl p-4 space-y-4">
+              <p className="text-xs font-bold text-red-600 uppercase tracking-wide">Nuevo Bloqueo (No Laborable)</p>
               <div>
                 <label className="text-[10px] font-bold text-hav-text-muted uppercase block mb-2">
-                  Día seleccionado: {selectedDate
+                  Día a bloquear: {selectedDate
                     ? new Date(selectedDate+'T12:00:00').toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long',year:'numeric'})
                     : 'Ninguno'}
                 </label>
                 <MiniCalendar selected={selectedDate} onSelect={setSelectedDate} />
               </div>
               <div className="grid grid-cols-2 gap-3 pt-1">
-                <TimePicker label="Hora de inicio" value={inicioT} onChange={setInicioT} />
-                <TimePicker label="Hora de fin"    value={finT}    onChange={setFinT}    />
+                <TimePicker label="Desde las..." value={inicioT} onChange={setInicioT} />
+                <TimePicker label="Hasta las..."    value={finT}    onChange={setFinT}    />
               </div>
               <div className="flex justify-end">
                 <button type="submit" disabled={savingH}
-                  className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-hav-primary hover:bg-hav-primary-dark rounded-lg disabled:opacity-70 transition-colors">
-                  {savingH ? <Spinner size="sm"/> : <><CheckCircle2 size={13}/> Guardar Jornada</>}
+                  className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-white bg-red-500 hover:bg-red-600 rounded-lg disabled:opacity-70 transition-colors">
+                  {savingH ? <Spinner size="sm"/> : <><CheckCircle2 size={13}/> Confirmar Bloqueo</>}
                 </button>
               </div>
             </form>
-          )}
+          ) /* (continúa con la lista de bloqueos) */}
 
           {loadingH ? (
             <div className="py-6 flex justify-center"><Spinner /></div>
           ) : Object.keys(byMonth).length === 0 ? (
             <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 text-sm">
-              Sin jornadas registradas.
+              <p>El médico está disponible todos los días.</p>
+              <p className="text-[10px] mt-1 italic">Añade bloqueos para días festivos, vacaciones o descansos.</p>
             </div>
           ) : (
             <div className="space-y-5">
@@ -321,18 +322,18 @@ export function StaffDetailPanel({ member, showToast, onStatusToggle, onEdit }) 
                       const finFmt    = from24h(h.hora_fin);
                       return (
                         <div key={h.id_horario} className={`flex items-center justify-between px-4 py-3 rounded-xl border group transition-all ${
-                          h.activo ? 'bg-white border-gray-100 hover:border-hav-primary/20 hover:shadow-sm' : 'bg-gray-50 border-gray-100 opacity-60'
+                          h.activo ? 'bg-red-50/30 border-red-100 hover:border-red-200 hover:shadow-sm' : 'bg-gray-50 border-gray-100 opacity-60'
                         }`}>
                           <div className="flex items-center gap-3">
-                            <div className="flex flex-col items-center justify-center w-10 h-10 bg-hav-primary/8 rounded-lg flex-shrink-0">
-                              <span className="text-[11px] font-bold text-hav-primary leading-none">{d.getDate()}</span>
-                              <span className="text-[9px] text-hav-text-muted uppercase">{DIAS_CORTO[d.getDay()]}</span>
+                            <div className={`flex flex-col items-center justify-center w-10 h-10 rounded-lg flex-shrink-0 ${h.activo ? 'bg-red-100' : 'bg-gray-100'}`}>
+                              <span className={`text-[11px] font-bold leading-none ${h.activo ? 'text-red-600' : 'text-gray-400'}`}>{d.getDate()}</span>
+                              <span className="text-[9px] text-gray-400 uppercase">{DIAS_CORTO[d.getDay()]}</span>
                             </div>
                             <div>
                               <div className="flex items-center gap-1.5">
                                 <Clock size={12} className="text-gray-400" />
                                 <span className={`text-sm font-semibold ${!h.activo ? 'line-through text-gray-400' : 'text-hav-text-main'}`}>
-                                  {inicioFmt.hour}:{inicioFmt.minute} {inicioFmt.period} – {finFmt.hour}:{finFmt.minute} {finFmt.period}
+                                  Bloqueado: {inicioFmt.hour}:{inicioFmt.minute} {inicioFmt.period} – {finFmt.hour}:{finFmt.minute} {finFmt.period}
                                 </span>
                               </div>
                             </div>

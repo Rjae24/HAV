@@ -146,7 +146,7 @@ export default function StaffManagement({ showToast }) {
       } else {
         const { data: usuario, error: uErr } = await supabase
           .from('usuario')
-          .insert({ id_rol: parseInt(form.rol), username: form.email, password_hash: form.password })
+          .insert({ id_rol: parseInt(form.rol), username: form.email, password_hash: form.password, estado_activo: true })
           .select().single();
         if (uErr) throw uErr;
 
@@ -315,6 +315,7 @@ export default function StaffManagement({ showToast }) {
                   <label className="block text-xs font-semibold text-hav-text-main mb-1">Rol en Sistema *</label>
                   <select required value={form.rol} disabled={isEditing} onChange={e => setForm({...form, rol: e.target.value})}
                     className="w-full px-3 py-2 border rounded-lg text-sm bg-white disabled:bg-gray-100 focus:ring-1 focus:ring-hav-primary focus:outline-none">
+                    <option value="1">Súper Admin</option>
                     <option value="2">Médico Especialista</option>
                     <option value="3">Recepción / Caja</option>
                   </select>

@@ -30,8 +30,11 @@ function buildCalendar(year, month) {
   return cells;
 }
 
-// Checks if a given dateStr (YYYY-MM-DD) and time ('HH:MM') fall within any active block
-function isWithinBlock(blocks, dateStr, timeHHMM) {
+const DEFAULT_START = "08:00";
+const DEFAULT_END   = "18:00";
+
+// Checks if a given dateStr (YYYY-MM-DD) and time ('HH:MM') fall within any active BLOCK (meaning specialist is NOT available)
+function isBlocked(blocks, dateStr, timeHHMM) {
   if (!blocks || blocks.length === 0) return false;
   const [th, tm] = timeHHMM.split(':').map(Number);
   const tMins = th * 60 + tm;
@@ -55,21 +58,25 @@ function fmt12(hhmm) {
   return `${h12}:${String(m).padStart(2,'0')} ${p}`;
 }
 
-// Generate 30-min slots from available blocks
-function generateSlots(blocks) {
+// Generate 30-min slots based on default work range, excluding blocked ones
+function generateSlots(blocks, dateStr) {
   const slots = [];
-  blocks.forEach(b => {
-    const [sh, sm] = b.hora_inicio.split(':').map(Number);
-    const [eh, em] = b.hora_fin.split(':').map(Number);
-    let cur = sh * 60 + sm;
-    const end = eh * 60 + em;
-    while (cur + 30 <= end) {
-      const hh = String(Math.floor(cur / 60)).padStart(2, '0');
-      const mm = String(cur % 60).padStart(2, '0');
-      slots.push(`${hh}:${mm}`);
-      cur += 30;
+  const [sh, sm] = DEFAULT_START.split(':').map(Number);
+  const [eh, em] = DEFAULT_END.split(':').map(Number);
+  let cur = sh * 60 + sm;
+  const end = eh * 60 + em;
+
+  while (cur + 30 <= end) {
+    const hh = String(Math.floor(cur / 60)).padStart(2, '0');
+    const mm = String(cur % 60).padStart(2, '0');
+    const hhmm = `${hh}:${mm}`;
+    
+    // Only add if NOT blocked
+    if (!isBlocked(blocks, dateStr, hhmm)) {
+      slots.push(hhmm);
     }
-  });
+    cur += 30;
+  }
   return slots;
 }
 
@@ -169,8 +176,8 @@ export default function CalendarView({ userRole, showToast }) {
   // Validate time when it changes
   useEffect(() => {
     if (!form.time || !form.specialistId) { setAvailabilityWarning(''); return; }
-    if (!isWithinBlock(availableBlocks, activeDateStr, form.time)) {
-      setAvailabilityWarning('⚠ El especialista no tiene disponibilidad en ese horario.');
+    if (isBlocked(availableBlocks, activeDateStr, form.time)) {
+      setAvailabilityWarning('⚠ El especialista NO está disponible en este horario (Bloqueado).');
     } else {
       setAvailabilityWarning('');
     }
@@ -242,8 +249,8 @@ export default function CalendarView({ userRole, showToast }) {
       showToast?.({ type: 'error', title: 'Campos incompletos', message: 'Complete todos los campos obligatorios' });
       return;
     }
-    if (availableBlocks.length > 0 && !isWithinBlock(availableBlocks, selectedDateStr, form.time)) {
-      showToast?.({ type: 'error', title: 'Sin disponibilidad', message: 'La hora elegida está fuera del horario del especialista' });
+    if (isBlocked(availableBlocks, selectedDateStr, form.time)) {
+      showToast?.({ type: 'error', title: 'Sin disponibilidad', message: 'La hora elegida está bloqueada para este especialista' });
       return;
     }
     setIsSaving(true);
@@ -657,7 +664,7 @@ export default function CalendarView({ userRole, showToast }) {
                     </div>
                   ) : (
                     <div className="flex flex-wrap gap-2">
-                      {generateSlots(availableBlocks).map(slot => (
+                      {generateSlots(availableBlocks, activeDateStr).map(slot => (
                         <button
                           key={slot}
                           type="button"

@@ -424,7 +424,7 @@ export default function PatientsView({ showToast, userRole }) {
             <form onSubmit={handleSavePatient} className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-hav-text-main mb-1">C\u00e9dula * (solo n\u00fameros)</label>
+                  <label className="block text-xs font-semibold text-hav-text-main mb-1">Cédula * (solo números)</label>
                   <input
                     required
                     type="text"
