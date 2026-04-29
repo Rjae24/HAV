@@ -660,12 +660,16 @@ export default function CalendarView({ userRole, showToast }) {
                   </label>
                   {!loadingBlocks && (
                     <div className="flex flex-wrap gap-2">
-                      {generateSlots(availableBlocks, activeDateStr).length === 0 ? (
-                        <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 w-full">
-                          <AlertTriangle size={14}/> Este especialista no tiene horas disponibles (Día bloqueado).
-                        </div>
-                      ) : (
-                        generateSlots(availableBlocks, activeDateStr).map(slot => (
+                      {(() => {
+                        const slots = generateSlots(availableBlocks, activeDateStr);
+                        if (slots.length === 0) {
+                          return (
+                            <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 w-full">
+                              <AlertTriangle size={14}/> ℹ️ El especialista no tiene disponibilidad para esta fecha (Horario bloqueado).
+                            </div>
+                          );
+                        }
+                        return slots.map(slot => (
                           <button
                             key={slot}
                             type="button"
@@ -678,8 +682,8 @@ export default function CalendarView({ userRole, showToast }) {
                           >
                             {fmt12(slot)}
                           </button>
-                        ))
-                      )}
+                        ));
+                      })()}
                     </div>
                   )}
                   {form.time && (
