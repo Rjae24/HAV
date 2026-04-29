@@ -658,26 +658,28 @@ export default function CalendarView({ userRole, showToast }) {
                   <label className="block text-xs font-semibold text-hav-text-main mb-2">
                     Hora de la cita * {loadingBlocks && <Spinner size="sm" className="inline ml-1"/>}
                   </label>
-                  {!loadingBlocks && availableBlocks.length === 0 ? (
-                    <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                      <AlertTriangle size={14}/> Este especialista no tiene bloques de horario para este día.
-                    </div>
-                  ) : (
+                  {!loadingBlocks && (
                     <div className="flex flex-wrap gap-2">
-                      {generateSlots(availableBlocks, activeDateStr).map(slot => (
-                        <button
-                          key={slot}
-                          type="button"
-                          onClick={() => setForm(f => ({...f, time: slot}))}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
-                            form.time === slot
-                              ? 'bg-hav-primary text-white border-hav-primary shadow-md shadow-hav-primary/20'
-                              : 'bg-white text-hav-text-main border-gray-200 hover:border-hav-primary hover:text-hav-primary'
-                          }`}
-                        >
-                          {fmt12(slot)}
-                        </button>
-                      ))}
+                      {generateSlots(availableBlocks, activeDateStr).length === 0 ? (
+                        <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 w-full">
+                          <AlertTriangle size={14}/> Este especialista no tiene horas disponibles (Día bloqueado).
+                        </div>
+                      ) : (
+                        generateSlots(availableBlocks, activeDateStr).map(slot => (
+                          <button
+                            key={slot}
+                            type="button"
+                            onClick={() => setForm(f => ({...f, time: slot}))}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                              form.time === slot
+                                ? 'bg-hav-primary text-white border-hav-primary shadow-md shadow-hav-primary/20'
+                                : 'bg-white text-hav-text-main border-gray-200 hover:border-hav-primary hover:text-hav-primary'
+                            }`}
+                          >
+                            {fmt12(slot)}
+                          </button>
+                        ))
+                      )}
                     </div>
                   )}
                   {form.time && (
