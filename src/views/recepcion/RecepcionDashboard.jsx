@@ -6,7 +6,6 @@ import Spinner from '../../components/Spinner';
 export default function RecepcionDashboard({ user, onNavigate, showToast }) {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const dateStr = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const formattedDate = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
 
@@ -48,7 +47,6 @@ export default function RecepcionDashboard({ user, onNavigate, showToast }) {
         .eq('id_cita', id);
 
       if (error) throw error;
-
       setAppointments((prev) => prev.map((a) => a.id_cita === id ? { ...a, estado: 'confirmada' } : a));
       showToast({ type: 'success', title: 'Cita confirmada', message: 'Estado actualizado en el sistema' });
     } catch (err) {

@@ -59,8 +59,8 @@ export default function Sidebar({ user, currentView, onNavigate }) {
               id={`nav-${id}`}
               onClick={() => onNavigate(id)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group ${isActive
-                  ? 'bg-hav-primary text-white shadow-md shadow-hav-primary/20'
-                  : 'text-hav-text-muted hover:bg-hav-primary/8 hover:text-hav-primary'
+                ? 'bg-hav-primary text-white shadow-md shadow-hav-primary/20'
+                : 'text-hav-text-muted hover:bg-hav-primary/8 hover:text-hav-primary'
                 }`}
             >
               <Icon size={16} className={isActive ? 'text-white' : 'text-hav-text-muted group-hover:text-hav-primary'} />
