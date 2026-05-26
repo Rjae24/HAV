@@ -3,26 +3,26 @@ import { ChevronLeft, ChevronRight, Clock, Plus, X, CheckCircle, AlertTriangle, 
 import { supabase } from '../../lib/supabase';
 import Spinner from '../../components/Spinner';
 
-const DAYS   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const ESTADO_COLOR = {
   completada: 'bg-green-500',
-  confirmada:  'bg-blue-500',
-  pendiente:   'bg-amber-400',
-  cancelada:   'bg-red-400',
+  confirmada: 'bg-blue-500',
+  pendiente: 'bg-amber-400',
+  cancelada: 'bg-red-400',
 };
 const ESTADO_BADGE = {
   completada: 'bg-green-100 text-green-700',
-  confirmada:  'bg-blue-100 text-blue-700',
-  pendiente:   'bg-amber-100 text-amber-700',
-  cancelada:   'bg-red-100 text-red-600',
+  confirmada: 'bg-blue-100 text-blue-700',
+  pendiente: 'bg-amber-100 text-amber-700',
+  cancelada: 'bg-red-100 text-red-600',
 };
 
 function buildCalendar(year, month) {
   const firstDay = new Date(year, month, 1).getDay();
-  const days     = new Date(year, month + 1, 0).getDate();
+  const days = new Date(year, month + 1, 0).getDate();
   const prevDays = new Date(year, month, 0).getDate();
-  const cells    = [];
+  const cells = [];
   for (let i = firstDay - 1; i >= 0; i--) cells.push({ day: prevDays - i, isCurrent: false });
   for (let i = 1; i <= days; i++)          cells.push({ day: i, isCurrent: true });
   const remaining = 42 - cells.length;
@@ -31,7 +31,7 @@ function buildCalendar(year, month) {
 }
 
 const DEFAULT_START = "08:00";
-const DEFAULT_END   = "18:00";
+const DEFAULT_END = "18:00";
 
 // Checks if a given dateStr (YYYY-MM-DD) and time ('HH:MM') fall within any active BLOCK (meaning specialist is NOT available)
 function isBlocked(blocks, dateStr, timeHHMM) {
@@ -55,24 +55,44 @@ function fmt12(hhmm) {
   const [h, m] = hhmm.split(':').map(Number);
   const p = h >= 12 ? 'PM' : 'AM';
   const h12 = h % 12 || 12;
-  return `${h12}:${String(m).padStart(2,'0')} ${p}`;
+  return `${h12}:${String(m).padStart(2, '0')} ${p}`;
 }
 
 // Generate 30-min slots based on default work range, excluding blocked ones
-function generateSlots(blocks, dateStr) {
+function generateSlots(blocks, dateStr, selectedTime = null) {
   const slots = [];
   const [sh, sm] = DEFAULT_START.split(':').map(Number);
   const [eh, em] = DEFAULT_END.split(':').map(Number);
   let cur = sh * 60 + sm;
   const end = eh * 60 + em;
 
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const selectedDateObj = new Date(y, m - 1, d);
+  const now = new Date();
+  const todayObj = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  const isPastDate = selectedDateObj < todayObj;
+  const isToday = selectedDateObj.getTime() === todayObj.getTime();
+  const currentMins = now.getHours() * 60 + now.getMinutes();
+
   while (cur + 30 <= end) {
     const hh = String(Math.floor(cur / 60)).padStart(2, '0');
     const mm = String(cur % 60).padStart(2, '0');
     const hhmm = `${hh}:${mm}`;
-    
-    // Only add if NOT blocked
-    if (!isBlocked(blocks, dateStr, hhmm)) {
+
+    let isPastTime = false;
+    if (isPastDate) {
+      isPastTime = true;
+    } else if (isToday && cur <= currentMins) {
+      isPastTime = true;
+    }
+
+    if (selectedTime && selectedTime === hhmm) {
+      isPastTime = false;
+    }
+
+    // Only add if NOT blocked and NOT past
+    if (!isPastTime && !isBlocked(blocks, dateStr, hhmm)) {
       slots.push(hhmm);
     }
     cur += 30;
@@ -82,24 +102,24 @@ function generateSlots(blocks, dateStr) {
 
 export default function CalendarView({ userRole, showToast }) {
   const today = new Date();
-  const [curYear, setCurYear]     = useState(today.getFullYear());
-  const [curMonth, setCurMonth]   = useState(today.getMonth());
+  const [curYear, setCurYear] = useState(today.getFullYear());
+  const [curMonth, setCurMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState(today.getDate());
 
   const [appointments, setAppointments] = useState([]);
-  const [loading, setLoading]           = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const [showModal, setShowModal]       = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [patientsList, setPatientsList] = useState([]);
   const [specialistsList, setSpecialistsList] = useState([]);
   const [patientSearch, setPatientSearch] = useState('');
 
   // Specialist availability blocks for the selected specialist
-  const [availableBlocks, setAvailableBlocks]   = useState([]);
-  const [loadingBlocks, setLoadingBlocks]         = useState(false);
+  const [availableBlocks, setAvailableBlocks] = useState([]);
+  const [loadingBlocks, setLoadingBlocks] = useState(false);
   const [availabilityWarning, setAvailabilityWarning] = useState('');
 
-  const [form, setForm]     = useState({ patientId: '', time: '', motivo: 'Consulta Nueva', specialistId: '', monto: '', metodo_pago: 'Efectivo', editingId: null });
+  const [form, setForm] = useState({ patientId: '', time: '', motivo: 'Consulta Nueva', specialistId: '', monto: '', metodo_pago: 'Efectivo', editingId: null });
   const [editDate, setEditDate] = useState(''); // used only in edit mode — overrides selectedDateStr
   const [isSaving, setIsSaving] = useState(false);
   const [showNewPatientForm, setShowNewPatientForm] = useState(false);
@@ -222,14 +242,14 @@ export default function CalendarView({ userRole, showToast }) {
         }])
         .select('id_paciente, nombre, apellidos, cedula').single();
       if (error) throw error;
-      
+
       // Initialize empty historial_clinico
       await supabase.from('historial_clinico').insert([{ id_paciente: patient.id_paciente }]);
 
       showToast?.({ type: 'success', title: 'Paciente Creado', message: 'Paciente registrado exitosamente' });
-      
+
       // Update lists and select it
-      setPatientsList(prev => [...prev, patient].sort((a,b) => a.nombre.localeCompare(b.nombre)));
+      setPatientsList(prev => [...prev, patient].sort((a, b) => a.nombre.localeCompare(b.nombre)));
       setForm(f => ({ ...f, patientId: patient.id_paciente }));
       setPatientSearch('');
       setShowNewPatientForm(false);
@@ -257,7 +277,7 @@ export default function CalendarView({ userRole, showToast }) {
     try {
       const dateForSave = form.editingId && editDate ? editDate : selectedDateStr;
       const fullDate = `${dateForSave}T${form.time}:00`;
-      
+
       if (form.editingId) {
         // UPDATE Existing
         const { error } = await supabase.from('cita').update({
@@ -287,9 +307,9 @@ export default function CalendarView({ userRole, showToast }) {
 
         // 2. Insert Cita
         const { error } = await supabase.from('cita').insert({
-          id_paciente:    form.patientId,
+          id_paciente: form.patientId,
           id_especialista: form.specialistId,
-          fecha_pautada:  fullDate,
+          fecha_pautada: fullDate,
           motivo_consulta: form.motivo,
           estado: 'pendiente',
           id_pago: pagoId
@@ -347,7 +367,7 @@ export default function CalendarView({ userRole, showToast }) {
         </div>
         {(userRole === 'recepcion' || userRole === 'superadmin') && (
           <button
-            onClick={() => { setForm({ patientId:'', time:'', motivo:'Consulta Nueva', specialistId:'', monto: '', metodo_pago: 'Efectivo', editingId: null }); setPatientSearch(''); setShowModal(true); setShowNewPatientForm(false); }}
+            onClick={() => { setForm({ patientId: '', time: '', motivo: 'Consulta Nueva', specialistId: '', monto: '', metodo_pago: 'Efectivo', editingId: null }); setPatientSearch(''); setShowModal(true); setShowNewPatientForm(false); }}
             className="flex items-center gap-2 bg-hav-primary hover:bg-hav-primary-dark text-white px-4 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-md shadow-hav-primary/20"
           >
             <Plus size={16} /> Nueva Cita
@@ -362,8 +382,8 @@ export default function CalendarView({ userRole, showToast }) {
           <div className="flex items-center justify-between mb-5">
             <h2 className="font-semibold text-lg text-hav-text-main">{MONTHS[curMonth]} {curYear}</h2>
             <div className="flex items-center gap-1">
-              <button onClick={handlePrev} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"><ChevronLeft size={18}/></button>
-              <button onClick={handleNext} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"><ChevronRight size={18}/></button>
+              <button onClick={handlePrev} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"><ChevronLeft size={18} /></button>
+              <button onClick={handleNext} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"><ChevronRight size={18} /></button>
             </div>
           </div>
           <div className="grid grid-cols-7 gap-1 mb-1">
@@ -372,23 +392,22 @@ export default function CalendarView({ userRole, showToast }) {
           <div className="grid grid-cols-7 gap-1 flex-1">
             {cells.map((c, i) => {
               const isSelected = c.isCurrent && c.day === selectedDay;
-              const hasAppts   = c.isCurrent && appointments.some(a => {
+              const hasAppts = c.isCurrent && appointments.some(a => {
                 const d = new Date(a.fecha_pautada);
                 return d.getFullYear() === curYear && d.getMonth() === curMonth && d.getDate() === c.day;
               });
               const isToday = c.isCurrent && c.day === today.getDate() && curMonth === today.getMonth() && curYear === today.getFullYear();
               return (
                 <button key={i} onClick={() => c.isCurrent && setSelectedDay(c.day)} disabled={!c.isCurrent}
-                  className={`w-full aspect-square flex flex-col items-center justify-center rounded-xl text-[13px] font-medium transition-all relative ${
-                    !c.isCurrent ? 'text-gray-300 cursor-not-allowed' :
-                    isSelected   ? 'bg-hav-primary text-white font-bold shadow-md shadow-hav-primary/30' :
-                    isToday      ? 'ring-2 ring-hav-primary/40 text-hav-primary font-bold' :
-                                   'text-hav-text-main hover:bg-gray-100'
-                  }`}
+                  className={`w-full aspect-square flex flex-col items-center justify-center rounded-xl text-[13px] font-medium transition-all relative ${!c.isCurrent ? 'text-gray-300 cursor-not-allowed' :
+                    isSelected ? 'bg-hav-primary text-white font-bold shadow-md shadow-hav-primary/30' :
+                      isToday ? 'ring-2 ring-hav-primary/40 text-hav-primary font-bold' :
+                        'text-hav-text-main hover:bg-gray-100'
+                    }`}
                 >
                   {c.day}
-                  {hasAppts && !isSelected && <div className="w-1.5 h-1.5 rounded-full bg-hav-secondary absolute bottom-1.5"/>}
-                  {hasAppts && isSelected  && <div className="w-1.5 h-1.5 rounded-full bg-white absolute bottom-1.5"/>}
+                  {hasAppts && !isSelected && <div className="w-1.5 h-1.5 rounded-full bg-hav-secondary absolute bottom-1.5" />}
+                  {hasAppts && isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white absolute bottom-1.5" />}
                 </button>
               );
             })}
@@ -396,9 +415,9 @@ export default function CalendarView({ userRole, showToast }) {
 
           {/* Legend */}
           <div className="mt-4 pt-3 border-t border-gray-50 flex items-center gap-4 text-[10px] text-gray-400">
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-hav-secondary inline-block"/>Con citas</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block"/>Completada</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block"/>Pendiente</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-hav-secondary inline-block" />Con citas</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500 inline-block" />Completada</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />Pendiente</span>
           </div>
         </div>
 
@@ -418,7 +437,7 @@ export default function CalendarView({ userRole, showToast }) {
               <div className="py-8 flex justify-center"><Spinner /></div>
             ) : selectedDateAppts.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-hav-text-muted opacity-50">
-                <Clock size={40} className="mb-3 opacity-30"/>
+                <Clock size={40} className="mb-3 opacity-30" />
                 <p className="text-sm font-medium">Sin citas para este día</p>
                 {(userRole === 'recepcion' || userRole === 'superadmin') && (
                   <button onClick={() => setShowModal(true)} className="mt-3 text-xs text-hav-primary hover:underline font-semibold">
@@ -438,7 +457,7 @@ export default function CalendarView({ userRole, showToast }) {
                       </div>
                       {/* Dot line */}
                       <div className="w-px bg-gray-100 relative">
-                        <div className={`absolute top-2 -left-1.5 w-3 h-3 rounded-full border-2 border-white shadow-sm ${ESTADO_COLOR[a.estado] || 'bg-gray-400'}`}/>
+                        <div className={`absolute top-2 -left-1.5 w-3 h-3 rounded-full border-2 border-white shadow-sm ${ESTADO_COLOR[a.estado] || 'bg-gray-400'}`} />
                       </div>
                       {/* Content */}
                       <div className="flex-1 min-w-0">
@@ -460,8 +479,8 @@ export default function CalendarView({ userRole, showToast }) {
                           <div className="flex gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onClick={() => {
                               const d = new Date(a.fecha_pautada);
-                              const pad = n => String(n).padStart(2,'0');
-                              const dStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+                              const pad = n => String(n).padStart(2, '0');
+                              const dStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
                               setEditDate(dStr);
                               setForm({
                                 patientId: a.pacientes.id_paciente,
@@ -477,7 +496,7 @@ export default function CalendarView({ userRole, showToast }) {
                             </button>
                             <button onClick={() => handleConfirmAppt(a.id_cita)}
                               className="text-[10px] font-semibold text-white bg-green-500 hover:bg-green-600 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1">
-                              <CheckCircle size={10}/> Confirmar
+                              <CheckCircle size={10} /> Confirmar
                             </button>
                             <button onClick={() => handleCancelAppt(a.id_cita)}
                               className="text-[10px] font-semibold text-red-600 bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg transition-colors">
@@ -491,8 +510,8 @@ export default function CalendarView({ userRole, showToast }) {
                           <div className="flex gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onClick={() => {
                               const d = new Date(a.fecha_pautada);
-                              const pad = n => String(n).padStart(2,'0');
-                              const dStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+                              const pad = n => String(n).padStart(2, '0');
+                              const dStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
                               setEditDate(dStr);
                               setForm({
                                 patientId: a.pacientes.id_paciente,
@@ -529,9 +548,9 @@ export default function CalendarView({ userRole, showToast }) {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
               <h3 className="font-semibold text-hav-text-main flex items-center gap-2">
-                <Plus size={18} className="text-hav-primary"/> {form.editingId ? 'Editar Cita' : 'Agendar Cita'}
+                <Plus size={18} className="text-hav-primary" /> {form.editingId ? 'Editar Cita' : 'Agendar Cita'}
               </h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20}/></button>
+              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
             </div>
 
             <form onSubmit={handleSaveAppt} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
@@ -541,7 +560,7 @@ export default function CalendarView({ userRole, showToast }) {
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-xs font-semibold text-hav-text-main">Paciente *</label>
                   {!form.editingId && foundPatient && foundPatient !== 'not_found' && (
-                    <button type="button" onClick={() => { setFoundPatient(null); setCedulaSearch(''); setForm(f => ({...f, patientId: ''})); }} className="text-[10px] font-bold text-hav-primary hover:underline">Cambiar</button>
+                    <button type="button" onClick={() => { setFoundPatient(null); setCedulaSearch(''); setForm(f => ({ ...f, patientId: '' })); }} className="text-[10px] font-bold text-hav-primary hover:underline">Cambiar</button>
                   )}
                 </div>
 
@@ -560,14 +579,14 @@ export default function CalendarView({ userRole, showToast }) {
                       <p className="text-sm font-semibold text-hav-text-main">{foundPatient.nombre} {foundPatient.apellidos}</p>
                       <p className="text-xs text-hav-text-muted">{foundPatient.cedula}</p>
                     </div>
-                    <CheckCircle size={16} className="text-green-500 flex-shrink-0"/>
+                    <CheckCircle size={16} className="text-green-500 flex-shrink-0" />
                   </div>
                 ) : (
                   /* Cedula search input */
                   <div className="space-y-2">
                     <div className="flex gap-2">
                       <div className="relative flex-1">
-                        <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"/>
+                        <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
                           type="text" placeholder="Ingrese la cédula del paciente…"
                           value={cedulaSearch}
@@ -576,7 +595,7 @@ export default function CalendarView({ userRole, showToast }) {
                             if (e.key === 'Enter') {
                               e.preventDefault();
                               const found = patientsList.find(p => p.cedula?.toLowerCase() === cedulaSearch.trim().toLowerCase());
-                              if (found) { setFoundPatient(found); setForm(f => ({...f, patientId: found.id_paciente})); }
+                              if (found) { setFoundPatient(found); setForm(f => ({ ...f, patientId: found.id_paciente })); }
                               else setFoundPatient('not_found');
                             }
                           }}
@@ -586,7 +605,7 @@ export default function CalendarView({ userRole, showToast }) {
                       <button type="button"
                         onClick={() => {
                           const found = patientsList.find(p => p.cedula?.toLowerCase() === cedulaSearch.trim().toLowerCase());
-                          if (found) { setFoundPatient(found); setForm(f => ({...f, patientId: found.id_paciente})); }
+                          if (found) { setFoundPatient(found); setForm(f => ({ ...f, patientId: found.id_paciente })); }
                           else setFoundPatient('not_found');
                         }}
                         className="px-3 py-2 bg-hav-primary text-white text-xs font-bold rounded-lg hover:bg-hav-primary-dark transition-colors"
@@ -595,23 +614,23 @@ export default function CalendarView({ userRole, showToast }) {
                     {foundPatient === 'not_found' && (
                       <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
                         <p className="text-xs text-amber-700">No se encontró paciente con esa cédula.</p>
-                        <button type="button" onClick={() => { setFoundPatient(null); setShowNewPatientForm(true); setNewPatient(n => ({...n, cedula: cedulaSearch})); }}
+                        <button type="button" onClick={() => { setFoundPatient(null); setShowNewPatientForm(true); setNewPatient(n => ({ ...n, cedula: cedulaSearch })); }}
                           className="text-[10px] font-bold text-hav-primary hover:underline ml-2 whitespace-nowrap">+ Crear nuevo</button>
                       </div>
                     )}
                     {showNewPatientForm && (
                       <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 space-y-3">
                         <div className="grid grid-cols-2 gap-3">
-                          <div><label className="text-[10px] text-gray-500">Cédula * (solo números)</label><input type="text" inputMode="numeric" pattern="[0-9]*" value={newPatient.cedula} onChange={e=>setNewPatient({...newPatient, cedula: e.target.value.replace(/\D/g,'')})} placeholder="Ej: 25000111" className="w-full px-2 py-1.5 text-xs border rounded focus:ring-1 focus:ring-hav-primary"/></div>
-                          <div><label className="text-[10px] text-gray-500">Teléfono</label><input type="text" value={newPatient.telefono} onChange={e=>setNewPatient({...newPatient, telefono: e.target.value})} className="w-full px-2 py-1.5 text-xs border rounded focus:ring-1 focus:ring-hav-primary"/></div>
+                          <div><label className="text-[10px] text-gray-500">Cédula * (solo números)</label><input type="text" inputMode="numeric" pattern="[0-9]*" value={newPatient.cedula} onChange={e => setNewPatient({ ...newPatient, cedula: e.target.value.replace(/\D/g, '') })} placeholder="Ej: 25000111" className="w-full px-2 py-1.5 text-xs border rounded focus:ring-1 focus:ring-hav-primary" /></div>
+                          <div><label className="text-[10px] text-gray-500">Teléfono</label><input type="text" value={newPatient.telefono} onChange={e => setNewPatient({ ...newPatient, telefono: e.target.value })} className="w-full px-2 py-1.5 text-xs border rounded focus:ring-1 focus:ring-hav-primary" /></div>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
-                          <div><label className="text-[10px] text-gray-500">Nombre *</label><input type="text" value={newPatient.nombre} onChange={e=>setNewPatient({...newPatient, nombre: e.target.value})} className="w-full px-2 py-1.5 text-xs border rounded focus:ring-1 focus:ring-hav-primary"/></div>
-                          <div><label className="text-[10px] text-gray-500">Apellidos *</label><input type="text" value={newPatient.apellidos} onChange={e=>setNewPatient({...newPatient, apellidos: e.target.value})} className="w-full px-2 py-1.5 text-xs border rounded focus:ring-1 focus:ring-hav-primary"/></div>
+                          <div><label className="text-[10px] text-gray-500">Nombre *</label><input type="text" value={newPatient.nombre} onChange={e => setNewPatient({ ...newPatient, nombre: e.target.value })} className="w-full px-2 py-1.5 text-xs border rounded focus:ring-1 focus:ring-hav-primary" /></div>
+                          <div><label className="text-[10px] text-gray-500">Apellidos *</label><input type="text" value={newPatient.apellidos} onChange={e => setNewPatient({ ...newPatient, apellidos: e.target.value })} className="w-full px-2 py-1.5 text-xs border rounded focus:ring-1 focus:ring-hav-primary" /></div>
                         </div>
-                        <div><label className="text-[10px] text-gray-500">F. Nacimiento</label><input type="date" value={newPatient.fecha_nacimiento} onChange={e=>setNewPatient({...newPatient, fecha_nacimiento: e.target.value})} className="w-full px-2 py-1.5 text-xs border rounded focus:ring-1 focus:ring-hav-primary"/></div>
+                        <div><label className="text-[10px] text-gray-500">F. Nacimiento</label><input type="date" value={newPatient.fecha_nacimiento} onChange={e => setNewPatient({ ...newPatient, fecha_nacimiento: e.target.value })} className="w-full px-2 py-1.5 text-xs border rounded focus:ring-1 focus:ring-hav-primary" /></div>
                         <button type="button" onClick={async () => { await handleCreatePatient(); setShowNewPatientForm(false); }} disabled={isSavingPatient} className="w-full bg-hav-primary text-white text-xs font-bold py-2 rounded shadow-sm flex items-center justify-center gap-1">
-                          {isSavingPatient ? <Spinner size="sm"/> : 'Guardar y Seleccionar Paciente'}
+                          {isSavingPatient ? <Spinner size="sm" /> : 'Guardar y Seleccionar Paciente'}
                         </button>
                       </div>
                     )}
@@ -623,7 +642,7 @@ export default function CalendarView({ userRole, showToast }) {
               <div>
                 <label className="block text-xs font-semibold text-hav-text-main mb-1">Especialista *</label>
                 <select required value={form.specialistId}
-                  onChange={e => setForm({...form, specialistId: e.target.value, time: ''})}
+                  onChange={e => setForm({ ...form, specialistId: e.target.value, time: '' })}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-hav-primary focus:ring-1 focus:ring-hav-primary"
                 >
                   <option value="" disabled>— Seleccione especialista —</option>
@@ -648,7 +667,7 @@ export default function CalendarView({ userRole, showToast }) {
                 </div>
               ) : (
                 <div className="bg-hav-primary/5 border border-hav-primary/20 rounded-xl px-4 py-3 text-xs text-hav-primary font-semibold">
-                  📅 Agendando para: {new Date(selectedDateStr + 'T12:00:00').toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long', year:'numeric' })}
+                  📅 Agendando para: {new Date(selectedDateStr + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                 </div>
               )}
 
@@ -656,16 +675,16 @@ export default function CalendarView({ userRole, showToast }) {
               {form.specialistId && (
                 <div>
                   <label className="block text-xs font-semibold text-hav-text-main mb-2">
-                    Hora de la cita * {loadingBlocks && <Spinner size="sm" className="inline ml-1"/>}
+                    Hora de la cita * {loadingBlocks && <Spinner size="sm" className="inline ml-1" />}
                   </label>
                   {!loadingBlocks && (
                     <div className="flex flex-wrap gap-2">
                       {(() => {
-                        const slots = generateSlots(availableBlocks, activeDateStr);
+                        const slots = generateSlots(availableBlocks, activeDateStr, form.time);
                         if (slots.length === 0) {
                           return (
                             <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 w-full">
-                              <AlertTriangle size={14}/> ℹ️ El especialista no tiene disponibilidad para esta fecha (Horario bloqueado).
+                              <AlertTriangle size={14} />No hay horarios disponibles para esta fecha (Horario bloqueado o fecha/hora transcurrida).
                             </div>
                           );
                         }
@@ -673,12 +692,11 @@ export default function CalendarView({ userRole, showToast }) {
                           <button
                             key={slot}
                             type="button"
-                            onClick={() => setForm(f => ({...f, time: slot}))}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
-                              form.time === slot
-                                ? 'bg-hav-primary text-white border-hav-primary shadow-md shadow-hav-primary/20'
-                                : 'bg-white text-hav-text-main border-gray-200 hover:border-hav-primary hover:text-hav-primary'
-                            }`}
+                            onClick={() => setForm(f => ({ ...f, time: slot }))}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${form.time === slot
+                              ? 'bg-hav-primary text-white border-hav-primary shadow-md shadow-hav-primary/20'
+                              : 'bg-white text-hav-text-main border-gray-200 hover:border-hav-primary hover:text-hav-primary'
+                              }`}
                           >
                             {fmt12(slot)}
                           </button>
@@ -693,14 +711,14 @@ export default function CalendarView({ userRole, showToast }) {
               )}
               {!form.specialistId && (
                 <div className="flex items-center gap-2 text-xs text-gray-400 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
-                  <Clock size={13}/> Seleccione un especialista para ver los horarios disponibles.
+                  <Clock size={13} /> Seleccione un especialista para ver los horarios disponibles.
                 </div>
               )}
 
               {/* Motivo */}
               <div>
                 <label className="block text-xs font-semibold text-hav-text-main mb-1">Motivo de la cita</label>
-                <input type="text" value={form.motivo} onChange={e => setForm({...form, motivo: e.target.value})}
+                <input type="text" value={form.motivo} onChange={e => setForm({ ...form, motivo: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-hav-primary focus:ring-1 focus:ring-hav-primary"
                 />
               </div>
@@ -712,13 +730,13 @@ export default function CalendarView({ userRole, showToast }) {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-hav-text-main mb-1">Monto (USD)</label>
-                      <input type="number" step="0.01" min="0" value={form.monto} onChange={e => setForm({...form, monto: e.target.value})} placeholder="Ej: 50.00"
+                      <input type="number" step="0.01" min="0" value={form.monto} onChange={e => setForm({ ...form, monto: e.target.value })} placeholder="Ej: 50.00"
                         className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500"
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-hav-text-main mb-1">Método</label>
-                      <select value={form.metodo_pago} onChange={e => setForm({...form, metodo_pago: e.target.value})}
+                      <select value={form.metodo_pago} onChange={e => setForm({ ...form, metodo_pago: e.target.value })}
                         className="w-full px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 bg-white"
                       >
                         <option value="Efectivo">Efectivo</option>
@@ -739,7 +757,7 @@ export default function CalendarView({ userRole, showToast }) {
                 </button>
                 <button type="submit" disabled={isSaving || !!availabilityWarning || (showNewPatientForm && !form.patientId)}
                   className="px-4 py-2 text-sm font-semibold text-white bg-hav-primary hover:bg-hav-primary-dark rounded-lg disabled:opacity-60 flex items-center gap-2">
-                  {isSaving ? <Spinner size="sm"/> : (form.editingId ? 'Actualizar Cita' : 'Confirmar Cita')}
+                  {isSaving ? <Spinner size="sm" /> : (form.editingId ? 'Actualizar Cita' : 'Confirmar Cita')}
                 </button>
               </div>
             </form>

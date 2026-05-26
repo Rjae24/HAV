@@ -6,12 +6,12 @@ import Spinner from '../../components/Spinner';
 export default function MedicoDashboard({ user, showToast }) {
   const [appointments, setAppointments] = useState([]);
   const [selectedAppt, setSelectedAppt] = useState(null);
-  
+
   const [soap, setSoap] = useState({ subjetivo: '', objetivo: '', analisis: '', plan: '' });
   const [vitals, setVitals] = useState({ tension_arterial: '', frecuencia_cardiaca: '', temperatura: '', saturacion_oxigeno: '', peso: '', imc: '' });
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  
+
   const [patientHistory, setPatientHistory] = useState([]);
   const [expandedHistory, setExpandedHistory] = useState(null);
 
@@ -40,10 +40,11 @@ export default function MedicoDashboard({ user, showToast }) {
           )
         `)
         .eq('id_especialista', user.id)
+        .neq('estado', 'cancelada')
         .order('fecha_pautada', { ascending: true });
 
       if (errCitas) throw errCitas;
-      
+
       setAppointments(citas || []);
       if (citas && citas.length > 0 && !selectedAppt) {
         setSelectedAppt(citas[0]);
@@ -55,7 +56,7 @@ export default function MedicoDashboard({ user, showToast }) {
         .select('id_usuario, nombre_completo, especialidad')
         .neq('id_usuario', user.id)
         .order('nombre_completo');
-      
+
       setSpecialists(specs || []);
 
     } catch (err) {
@@ -114,11 +115,11 @@ export default function MedicoDashboard({ user, showToast }) {
   useEffect(() => {
     if (selectedAppt?.pacientes?.id_paciente) {
       fetchHistory(selectedAppt.pacientes.id_paciente);
-      setSoap({ 
-         subjetivo: selectedAppt.motivo_consulta || '', 
-         objetivo: '', 
-         analisis: '', 
-         plan: '' 
+      setSoap({
+        subjetivo: selectedAppt.motivo_consulta || '',
+        objetivo: '',
+        analisis: '',
+        plan: ''
       });
       setVitals({ tension_arterial: '', frecuencia_cardiaca: '', temperatura: '', saturacion_oxigeno: '', peso: '', imc: '' });
     }
@@ -129,11 +130,11 @@ export default function MedicoDashboard({ user, showToast }) {
       showToast({ type: 'warning', title: 'SOAP incompleto', message: 'Ingrese al menos Subjetivo y Objetivo' });
       return;
     }
-    
+
     setSaving(true);
     try {
       const notas = `S: ${soap.subjetivo}\nO: ${soap.objetivo}`;
-      
+
       const { error: insertErr } = await supabase
         .from('consulta')
         .insert({
@@ -157,12 +158,12 @@ export default function MedicoDashboard({ user, showToast }) {
       await supabase.from('cita').update({ estado: 'completada' }).eq('id_cita', selectedAppt.id_cita);
 
       showToast({ type: 'success', title: '✅ Historia guardada', message: `Consulta registrada correctamente.` });
-      
+
       setSoap({ subjetivo: '', objetivo: '', analisis: '', plan: '' });
       setVitals({ tension_arterial: '', frecuencia_cardiaca: '', temperatura: '', saturacion_oxigeno: '', peso: '', imc: '' });
-      fetchDashboardData(); 
-      fetchHistory(selectedAppt.pacientes.id_paciente); 
-      
+      fetchDashboardData();
+      fetchHistory(selectedAppt.pacientes.id_paciente);
+
     } catch (err) {
       console.error(err);
       showToast({ type: 'error', title: 'Error', message: 'No se pudo guardar la historia' });
@@ -180,19 +181,19 @@ export default function MedicoDashboard({ user, showToast }) {
       const { error } = await supabase
         .from('interconsulta')
         .insert({
-           id_consulta: interForm.id_consulta,
-           id_especialista_envia: user.id,
-           id_especialista_recibe: interForm.id_especialista_recibe,
-           motivo_interconsulta: interForm.motivo,
-           estado: 'pendiente'
+          id_consulta: interForm.id_consulta,
+          id_especialista_envia: user.id,
+          id_especialista_recibe: interForm.id_especialista_recibe,
+          motivo_interconsulta: interForm.motivo,
+          estado: 'pendiente'
         });
-      
+
       if (error) throw error;
 
       showToast({ type: 'success', title: 'Interconsulta Solicitada', message: 'El especialista ha sido notificado.' });
       setShowInterModal(false);
       setInterForm({ id_consulta: null, id_especialista_recibe: '', motivo: '' });
-    } catch(err) {
+    } catch (err) {
       console.error(err);
       showToast({ type: 'error', title: 'Error', message: 'Fallo al solicitar interconsulta' });
     } finally {
@@ -217,13 +218,6 @@ export default function MedicoDashboard({ user, showToast }) {
             {user.name} · Especialista
           </p>
         </div>
-        <button
-          onClick={fetchGlobalHistory}
-          className="flex items-center gap-2 bg-white border border-gray-200 text-hav-text-main hover:bg-gray-50 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-sm"
-        >
-          {loadingGlobal ? <Spinner size="sm" /> : <FileText size={16} className="text-hav-primary" />}
-          Mis Consultas Anteriores
-        </button>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-5">
@@ -240,15 +234,14 @@ export default function MedicoDashboard({ user, showToast }) {
                 const isSelected = selectedAppt?.id_cita === a.id_cita;
                 const pName = `${a.pacientes?.nombre} ${a.pacientes?.apellidos}`;
                 const initial = a.pacientes?.nombre?.[0] || 'X';
-                const timeStr = new Date(a.fecha_pautada).toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'});
-                
+                const timeStr = new Date(a.fecha_pautada).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+
                 return (
                   <button
                     key={a.id_cita}
                     onClick={() => setSelectedAppt(a)}
-                    className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all ${
-                      isSelected ? 'bg-hav-primary text-white' : 'bg-gray-50 hover:bg-hav-primary/10 text-hav-text-main'
-                    } ${a.estado === 'completada' ? 'opacity-50' : ''}`}
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all ${isSelected ? 'bg-hav-primary text-white' : 'bg-gray-50 hover:bg-hav-primary/10 text-hav-text-main'
+                      } ${a.estado === 'completada' ? 'opacity-50' : ''}`}
                   >
                     <div className={`w-9 h-9 rounded-full font-bold text-xs flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-white/20 text-white' : 'bg-hav-primary text-white'}`}>
                       {initial}
@@ -285,10 +278,10 @@ export default function MedicoDashboard({ user, showToast }) {
                   </p>
                 </div>
               )}
-              
+
               <div className="text-xs text-gray-500 space-y-1 mt-2">
-                 <p><strong>Patologías:</strong> {historyRecord?.patologias || 'Ninguna registrada'}</p>
-                 <p><strong>Cirugías:</strong> {historyRecord?.cirugias || 'Ninguna registrada'}</p>
+                <p><strong>Patologías:</strong> {historyRecord?.patologias || 'Ninguna registrada'}</p>
+                <p><strong>Cirugías:</strong> {historyRecord?.cirugias || 'Ninguna registrada'}</p>
               </div>
             </div>
           )}
@@ -301,7 +294,7 @@ export default function MedicoDashboard({ user, showToast }) {
               <FileText size={16} className="text-hav-primary" />
               <h3 className="font-semibold text-hav-text-main">Nueva Nota Médica (SOAP)</h3>
             </div>
-            
+
             {selectedAppt?.estado === 'completada' ? (
               <div className="p-4 bg-green-50 text-green-700 rounded-xl font-medium text-sm text-center border border-green-100">
                 Consulta completada satisfactoriamente. <br /> Ahora puedes visualizar o interconsultar en el Registro Histórico.
@@ -372,47 +365,48 @@ export default function MedicoDashboard({ user, showToast }) {
               <h3 className="font-semibold text-hav-text-main mb-3 text-sm">Registro Histórico del Paciente</h3>
               <div className="space-y-2">
                 {patientHistory.map((h) => {
-                   const fecha = new Date(h.fecha_realizada).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
-                   return (
-                  <div key={h.id_consulta} className="border border-gray-100 rounded-xl overflow-hidden">
-                    <button
-                      onClick={() => setExpandedHistory(expandedHistory === h.id_consulta ? null : h.id_consulta)}
-                      className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="text-left">
-                        <p className="text-sm font-semibold text-hav-text-main">{h.diagnostico}</p>
-                        <p className="text-xs text-hav-text-muted">{fecha} · {h.cita?.especialista?.nombre_completo || 'Médico internista'}</p>
-                      </div>
-                      {expandedHistory === h.id_consulta ? <ChevronUp size={15} className="text-hav-text-muted" /> : <ChevronDown size={15} className="text-hav-text-muted" />}
-                    </button>
-                    
-                    {expandedHistory === h.id_consulta && (
-                      <div className="px-4 pb-4 border-t border-gray-50 bg-gray-50/50 pt-3 flex flex-col gap-3">
-                        <div>
-                          <p className="text-[10px] font-bold text-hav-primary uppercase">Notas (S/O)</p>
-                          <p className="text-xs text-hav-text-main whitespace-pre-wrap">{h.notas_medicas}</p>
+                  const fecha = new Date(h.fecha_realizada).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+                  return (
+                    <div key={h.id_consulta} className="border border-gray-100 rounded-xl overflow-hidden">
+                      <button
+                        onClick={() => setExpandedHistory(expandedHistory === h.id_consulta ? null : h.id_consulta)}
+                        className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="text-left">
+                          <p className="text-sm font-semibold text-hav-text-main">{h.diagnostico}</p>
+                          <p className="text-xs text-hav-text-muted">{fecha} · {h.cita?.especialista?.nombre_completo || 'Médico internista'}</p>
                         </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-hav-primary uppercase">Tratamiento (P)</p>
-                          <p className="text-xs text-hav-text-main whitespace-pre-wrap">{h.tratamiento}</p>
-                        </div>
+                        {expandedHistory === h.id_consulta ? <ChevronUp size={15} className="text-hav-text-muted" /> : <ChevronDown size={15} className="text-hav-text-muted" />}
+                      </button>
 
-                        {/* Solicitar Interconsulta */}
-                        <div className="pt-3 border-t border-white flex justify-end">
-                          <button
-                            onClick={() => {
-                               setInterForm({ ...interForm, id_consulta: h.id_consulta });
-                               setShowInterModal(true);
-                            }}
-                            className="bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-200 px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm"
-                          >
-                             <Share2 size={12} /> Solicitar Interconsulta
-                          </button>
+                      {expandedHistory === h.id_consulta && (
+                        <div className="px-4 pb-4 border-t border-gray-50 bg-gray-50/50 pt-3 flex flex-col gap-3">
+                          <div>
+                            <p className="text-[10px] font-bold text-hav-primary uppercase">Notas (S/O)</p>
+                            <p className="text-xs text-hav-text-main whitespace-pre-wrap">{h.notas_medicas}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-hav-primary uppercase">Tratamiento (P)</p>
+                            <p className="text-xs text-hav-text-main whitespace-pre-wrap">{h.tratamiento}</p>
+                          </div>
+
+                          {/* Solicitar Interconsulta */}
+                          <div className="pt-3 border-t border-white flex justify-end">
+                            <button
+                              onClick={() => {
+                                setInterForm({ ...interForm, id_consulta: h.id_consulta });
+                                setShowInterModal(true);
+                              }}
+                              className="bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-200 px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm"
+                            >
+                              <Share2 size={12} /> Solicitar Interconsulta
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                )})}
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )}
@@ -421,54 +415,54 @@ export default function MedicoDashboard({ user, showToast }) {
 
       {/* Modal Interconsulta */}
       {showInterModal && (
-         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm animate-fade-in">
-           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
-              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-orange-50/50">
-                 <h3 className="font-semibold text-orange-800 flex items-center gap-2">
-                   <Share2 size={16} /> Solicitar Interconsulta Médica
-                 </h3>
-                 <button onClick={() => setShowInterModal(false)} className="text-gray-400 hover:text-gray-700">
-                    <X size={18} />
-                 </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-orange-50/50">
+              <h3 className="font-semibold text-orange-800 flex items-center gap-2">
+                <Share2 size={16} /> Solicitar Interconsulta Médica
+              </h3>
+              <button onClick={() => setShowInterModal(false)} className="text-gray-400 hover:text-gray-700">
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveInterconsulta} className="p-5 space-y-4">
+              <div>
+                <label className="text-xs font-bold text-hav-text-main block mb-1">Dirigido a: (Especialista)</label>
+                <select
+                  required
+                  value={interForm.id_especialista_recibe}
+                  onChange={(e) => setInterForm({ ...interForm, id_especialista_recibe: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-hav-primary bg-white"
+                >
+                  <option value="">Seleccione un médico</option>
+                  {specialists.map(s => (
+                    <option key={s.id_usuario} value={s.id_usuario}>Dr. {s.nombre_completo} ({s.especialidad})</option>
+                  ))}
+                </select>
               </div>
 
-              <form onSubmit={handleSaveInterconsulta} className="p-5 space-y-4">
-                 <div>
-                    <label className="text-xs font-bold text-hav-text-main block mb-1">Dirigido a: (Especialista)</label>
-                    <select
-                      required
-                      value={interForm.id_especialista_recibe}
-                      onChange={(e) => setInterForm({ ...interForm, id_especialista_recibe: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-hav-primary bg-white"
-                    >
-                       <option value="">Seleccione un médico</option>
-                       {specialists.map(s => (
-                          <option key={s.id_usuario} value={s.id_usuario}>Dr. {s.nombre_completo} ({s.especialidad})</option>
-                       ))}
-                    </select>
-                 </div>
+              <div>
+                <label className="text-xs font-bold text-hav-text-main block mb-1">Motivo / Pregunta Clínica</label>
+                <textarea
+                  required
+                  placeholder="Explica qué patología u opinión requieres del especialista..."
+                  rows={3}
+                  value={interForm.motivo}
+                  onChange={(e) => setInterForm({ ...interForm, motivo: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-hav-primary resize-none"
+                />
+              </div>
 
-                 <div>
-                    <label className="text-xs font-bold text-hav-text-main block mb-1">Motivo / Pregunta Clínica</label>
-                    <textarea
-                      required
-                      placeholder="Explica qué patología u opinión requieres del especialista..."
-                      rows={3}
-                      value={interForm.motivo}
-                      onChange={(e) => setInterForm({ ...interForm, motivo: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-hav-primary resize-none"
-                    />
-                 </div>
-
-                 <div className="pt-2 flex justify-end gap-2">
-                    <button type="button" onClick={() => setShowInterModal(false)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-semibold transition-all">Cancelar</button>
-                    <button type="submit" disabled={sendingInter} className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-semibold shadow-sm shadow-orange-500/20 disabled:opacity-50 flex items-center gap-2 transition-all">
-                       {sendingInter ? <Spinner size="sm" /> : 'Enviar Solicitud'}
-                    </button>
-                 </div>
-              </form>
-           </div>
-         </div>
+              <div className="pt-2 flex justify-end gap-2">
+                <button type="button" onClick={() => setShowInterModal(false)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-semibold transition-all">Cancelar</button>
+                <button type="submit" disabled={sendingInter} className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-semibold shadow-sm shadow-orange-500/20 disabled:opacity-50 flex items-center gap-2 transition-all">
+                  {sendingInter ? <Spinner size="sm" /> : 'Enviar Solicitud'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
       {/* Global History Modal */}
       {showGlobalModal && (
@@ -476,11 +470,11 @@ export default function MedicoDashboard({ user, showToast }) {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[85vh]">
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
               <h3 className="font-semibold text-hav-text-main flex items-center gap-2">
-                <FileText size={18} className="text-hav-primary"/> Historial Global de Consultas
+                <FileText size={18} className="text-hav-primary" /> Historial Global de Consultas
               </h3>
-              <button onClick={() => setShowGlobalModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20}/></button>
+              <button onClick={() => setShowGlobalModal(false)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
             </div>
-            
+
             <div className="p-6 overflow-y-auto custom-scrollbar flex-1 bg-gray-50/30">
               {globalHistory.length === 0 ? (
                 <div className="text-center py-10 text-gray-400">
@@ -503,7 +497,7 @@ export default function MedicoDashboard({ user, showToast }) {
                           </div>
                           <span className="bg-gray-100 text-gray-500 text-[10px] px-2 py-1 rounded font-bold tracking-wider">CONSULTA #{h.id_consulta.substring(0, 8)}</span>
                         </div>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                           <div>
                             <p className="font-semibold text-hav-text-main mb-1">Notas Médicas (SOAP):</p>

@@ -282,13 +282,6 @@ export default function ReportsView({ showToast }) {
             {showExportMenu && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                 <button
-                  onClick={() => handleExport('pdf')}
-                  className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  <FileText size={16} className="text-red-500" />
-                  Exportar a PDF
-                </button>
-                <button
                   onClick={() => handleExport('excel')}
                   className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                 >
