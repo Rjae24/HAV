@@ -11,6 +11,7 @@ const NAV_ITEMS = {
     { id: 'patients', label: 'Pacientes', icon: ClipboardList },
     { id: 'appointments', label: 'Calendario', icon: CalendarDays },
     { id: 'reports', label: 'Reportes', icon: BarChart3 },
+    { id: 'stats', label: 'Estadísticas', icon: BarChart3 },
     { id: 'settings', label: 'Configuración', icon: Settings },
   ],
   recepcion: [
@@ -57,11 +58,10 @@ export default function Sidebar({ user, currentView, onNavigate }) {
               key={id}
               id={`nav-${id}`}
               onClick={() => onNavigate(id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group ${
-                isActive
-                  ? 'bg-hav-primary text-white shadow-md shadow-hav-primary/20'
-                  : 'text-hav-text-muted hover:bg-hav-primary/8 hover:text-hav-primary'
-              }`}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 group ${isActive
+                ? 'bg-hav-primary text-white shadow-md shadow-hav-primary/20'
+                : 'text-hav-text-muted hover:bg-hav-primary/8 hover:text-hav-primary'
+                }`}
             >
               <Icon size={16} className={isActive ? 'text-white' : 'text-hav-text-muted group-hover:text-hav-primary'} />
               <span className="flex-1 text-left">{label}</span>

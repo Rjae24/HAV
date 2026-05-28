@@ -10,6 +10,7 @@ import LoginScreen from './views/LoginScreen';
 import SuperAdminDashboard from './views/superadmin/SuperAdminDashboard';
 import StaffManagement from './views/superadmin/StaffManagement';
 import ReportsView from './views/superadmin/ReportsView';
+import StatisticsView from './views/superadmin/StatisticsView';
 import SettingsView from './views/superadmin/SettingsView';
 import RecepcionDashboard from './views/recepcion/RecepcionDashboard';
 import MedicoDashboard from './views/medico/MedicoDashboard';
@@ -29,6 +30,7 @@ function RouteView({ user, currentView, onNavigate, showToast }) {
     if (currentView === 'patients') return <PatientsView {...props} userRole={user.role} />;
     if (currentView === 'appointments') return <CalendarView {...props} />;
     if (currentView === 'reports') return <ReportsView {...props} />;
+    if (currentView === 'stats') return <StatisticsView {...props} />;
     if (currentView === 'settings') return <SettingsView {...props} />;
   }
 
@@ -95,17 +97,27 @@ function TopBar({ user, currentView, onLogout }) {
 // ─── App Root ────────────────────────────────────────────────────────────────
 export default function App() {
   const [currentUser, setCurrentUser] = useState(() => {
-    const savedUser = localStorage.getItem('hav_session');
-    return savedUser ? JSON.parse(savedUser) : null;
+    try {
+      const savedUser = localStorage.getItem('hav_session');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch (err) {
+      console.error("Error parsing session:", err);
+      localStorage.removeItem('hav_session');
+      return null;
+    }
   });
   const [currentView, setCurrentView] = useState('dashboard');
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem('hav_session', JSON.stringify(currentUser));
-    } else {
-      localStorage.removeItem('hav_session');
+    try {
+      if (currentUser) {
+        localStorage.setItem('hav_session', JSON.stringify(currentUser));
+      } else {
+        localStorage.removeItem('hav_session');
+      }
+    } catch (err) {
+      console.error("Error saving session:", err);
     }
   }, [currentUser]);
 

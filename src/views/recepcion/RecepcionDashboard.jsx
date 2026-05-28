@@ -6,7 +6,6 @@ import Spinner from '../../components/Spinner';
 export default function RecepcionDashboard({ user, onNavigate, showToast }) {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
-  
   const dateStr = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const formattedDate = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
 
@@ -27,7 +26,31 @@ export default function RecepcionDashboard({ user, onNavigate, showToast }) {
         .order('fecha_pautada', { ascending: true });
 
       if (error) throw error;
-      setAppointments(data || []);
+
+      const now = new Date();
+      const appointmentsToCancel = [];
+      const updatedCitas = [];
+
+      if (data) {
+        for (const cita of data) {
+          const apptTime = new Date(cita.fecha_pautada);
+          if (apptTime < now && (cita.estado === 'pendiente' || cita.estado === 'confirmada')) {
+            appointmentsToCancel.push(cita.id_cita);
+            updatedCitas.push({ ...cita, estado: 'cancelada' });
+          } else {
+            updatedCitas.push(cita);
+          }
+        }
+      }
+
+      if (appointmentsToCancel.length > 0) {
+        await supabase
+          .from('cita')
+          .update({ estado: 'cancelada' })
+          .in('id_cita', appointmentsToCancel);
+      }
+
+      setAppointments(updatedCitas);
     } catch (err) {
       console.error(err);
       showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar las citas' });
@@ -48,7 +71,6 @@ export default function RecepcionDashboard({ user, onNavigate, showToast }) {
         .eq('id_cita', id);
 
       if (error) throw error;
-      
       setAppointments((prev) => prev.map((a) => a.id_cita === id ? { ...a, estado: 'confirmada' } : a));
       showToast({ type: 'success', title: 'Cita confirmada', message: 'Estado actualizado en el sistema' });
     } catch (err) {
@@ -101,41 +123,46 @@ export default function RecepcionDashboard({ user, onNavigate, showToast }) {
             <h3 className="font-semibold text-hav-text-main">Citas Activas</h3>
             <button onClick={() => fetchData()} className="text-xs text-hav-primary hover:underline">Actualizar</button>
           </div>
-          
+
           {loading ? (
             <div className="py-8 flex justify-center"><Spinner /></div>
           ) : appointments.length === 0 ? (
-             <p className="text-sm text-gray-400 py-4">No hay citas registradas</p>
+            <p className="text-sm text-gray-400 py-4">No hay citas registradas</p>
           ) : (
             <div className="space-y-3">
               {appointments.map((a) => {
                 const fullName = `${a.pacientes?.nombre} ${a.pacientes?.apellidos}`;
                 const initial = a.pacientes?.nombre?.[0] || 'P';
-                const timeStr = new Date(a.fecha_pautada).toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'});
-                
+                const timeStr = new Date(a.fecha_pautada).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+
                 return (
-                <div key={a.id_cita} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-hav-primary/5 transition-colors">
-                  <div className="w-9 h-9 rounded-full bg-hav-primary text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
-                    {initial}
+                  <div key={a.id_cita} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-hav-primary/5 transition-colors">
+                    <div className="w-9 h-9 rounded-full bg-hav-primary text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
+                      {initial}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-hav-text-main truncate">{fullName}</p>
+                      <p className="text-xs text-hav-text-muted truncate">{a.especialista?.especialidad || 'Especialista'} · {timeStr}</p>
+                    </div>
+                    {(a.estado === 'confirmada' || a.estado === 'completada') ? (
+                      <span className="flex items-center gap-1 text-[10px] text-hav-secondary font-semibold bg-green-50 px-2 py-1 rounded-full flex-shrink-0">
+                        <CheckCircle size={10} /> {a.estado.toUpperCase()}
+                      </span>
+                    ) : a.estado === 'cancelada' ? (
+                      <span className="flex items-center gap-1 text-[10px] text-red-600 font-semibold bg-red-50 px-2 py-1 rounded-full flex-shrink-0">
+                        CANCELADA
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => confirmAppt(a.id_cita)}
+                        className="text-xs bg-hav-primary text-white px-3 py-1.5 rounded-full hover:bg-hav-primary-dark transition-colors flex-shrink-0"
+                      >
+                        Confirmar
+                      </button>
+                    )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-hav-text-main truncate">{fullName}</p>
-                    <p className="text-xs text-hav-text-muted truncate">{a.especialista?.especialidad || 'Especialista'} · {timeStr}</p>
-                  </div>
-                  {(a.estado === 'confirmada' || a.estado === 'completada') ? (
-                    <span className="flex items-center gap-1 text-[10px] text-hav-secondary font-semibold bg-green-50 px-2 py-1 rounded-full flex-shrink-0">
-                      <CheckCircle size={10} /> {a.estado.toUpperCase()}
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => confirmAppt(a.id_cita)}
-                      className="text-xs bg-hav-primary text-white px-3 py-1.5 rounded-full hover:bg-hav-primary-dark transition-colors flex-shrink-0"
-                    >
-                      Confirmar
-                    </button>
-                  )}
-                </div>
-              )})}
+                )
+              })}
             </div>
           )}
         </div>
