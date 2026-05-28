@@ -45,9 +45,36 @@ export default function MedicoDashboard({ user, showToast }) {
 
       if (errCitas) throw errCitas;
 
-      setAppointments(citas || []);
-      if (citas && citas.length > 0 && !selectedAppt) {
-        setSelectedAppt(citas[0]);
+      const now = new Date();
+      const appointmentsToCancel = [];
+      const activeCitas = [];
+
+      if (citas) {
+        for (const cita of citas) {
+          const apptTime = new Date(cita.fecha_pautada);
+          if (apptTime < now && (cita.estado === 'pendiente' || cita.estado === 'confirmada')) {
+            appointmentsToCancel.push(cita.id_cita);
+          } else {
+            activeCitas.push(cita);
+          }
+        }
+      }
+
+      if (appointmentsToCancel.length > 0) {
+        await supabase
+          .from('cita')
+          .update({ estado: 'cancelada' })
+          .in('id_cita', appointmentsToCancel);
+      }
+
+      setAppointments(activeCitas);
+      if (activeCitas.length > 0) {
+        const stillExists = activeCitas.some(a => a.id_cita === selectedAppt?.id_cita);
+        if (!stillExists) {
+          setSelectedAppt(activeCitas[0]);
+        }
+      } else {
+        setSelectedAppt(null);
       }
 
       // Traer otros especialistas para interconsulta

@@ -26,7 +26,31 @@ export default function RecepcionDashboard({ user, onNavigate, showToast }) {
         .order('fecha_pautada', { ascending: true });
 
       if (error) throw error;
-      setAppointments(data || []);
+
+      const now = new Date();
+      const appointmentsToCancel = [];
+      const updatedCitas = [];
+
+      if (data) {
+        for (const cita of data) {
+          const apptTime = new Date(cita.fecha_pautada);
+          if (apptTime < now && (cita.estado === 'pendiente' || cita.estado === 'confirmada')) {
+            appointmentsToCancel.push(cita.id_cita);
+            updatedCitas.push({ ...cita, estado: 'cancelada' });
+          } else {
+            updatedCitas.push(cita);
+          }
+        }
+      }
+
+      if (appointmentsToCancel.length > 0) {
+        await supabase
+          .from('cita')
+          .update({ estado: 'cancelada' })
+          .in('id_cita', appointmentsToCancel);
+      }
+
+      setAppointments(updatedCitas);
     } catch (err) {
       console.error(err);
       showToast({ type: 'error', title: 'Error', message: 'No se pudieron cargar las citas' });
@@ -123,6 +147,10 @@ export default function RecepcionDashboard({ user, onNavigate, showToast }) {
                     {(a.estado === 'confirmada' || a.estado === 'completada') ? (
                       <span className="flex items-center gap-1 text-[10px] text-hav-secondary font-semibold bg-green-50 px-2 py-1 rounded-full flex-shrink-0">
                         <CheckCircle size={10} /> {a.estado.toUpperCase()}
+                      </span>
+                    ) : a.estado === 'cancelada' ? (
+                      <span className="flex items-center gap-1 text-[10px] text-red-600 font-semibold bg-red-50 px-2 py-1 rounded-full flex-shrink-0">
+                        CANCELADA
                       </span>
                     ) : (
                       <button

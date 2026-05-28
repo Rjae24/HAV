@@ -145,7 +145,31 @@ export default function CalendarView({ userRole, showToast }) {
         `)
         .order('fecha_pautada', { ascending: true });
       if (error) throw error;
-      setAppointments(data || []);
+
+      const now = new Date();
+      const appointmentsToCancel = [];
+      const updatedCitas = [];
+
+      if (data) {
+        for (const cita of data) {
+          const apptTime = new Date(cita.fecha_pautada);
+          if (apptTime < now && (cita.estado === 'pendiente' || cita.estado === 'confirmada')) {
+            appointmentsToCancel.push(cita.id_cita);
+            updatedCitas.push({ ...cita, estado: 'cancelada' });
+          } else {
+            updatedCitas.push(cita);
+          }
+        }
+      }
+
+      if (appointmentsToCancel.length > 0) {
+        await supabase
+          .from('cita')
+          .update({ estado: 'cancelada' })
+          .in('id_cita', appointmentsToCancel);
+      }
+
+      setAppointments(updatedCitas);
     } catch (err) {
       console.error(err);
       showToast?.({ type: 'error', title: 'Error', message: 'No se pudieron cargar las citas' });

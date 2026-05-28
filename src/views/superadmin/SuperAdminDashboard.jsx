@@ -65,8 +65,8 @@ export default function SuperAdminDashboard({ onNavigate }) {
         const { data: espData } = await supabase.from('especialista').select('especialidad');
         if (espData) {
           const counts = espData.reduce((acc, curr) => {
-             acc[curr.especialidad] = (acc[curr.especialidad] || 0) + 1;
-             return acc;
+            acc[curr.especialidad] = (acc[curr.especialidad] || 0) + 1;
+            return acc;
           }, {});
           setChartData(Object.keys(counts).map(k => ({ name: k, count: counts[k] })));
         }
@@ -75,7 +75,7 @@ export default function SuperAdminDashboard({ onNavigate }) {
         let activities = [];
         if (recentPacRes.data) {
           activities.push(...recentPacRes.data.map(p => ({
-            id: 'p-'+p.fecha_registro,
+            id: 'p-' + p.fecha_registro,
             action: 'Nuevo Paciente',
             detail: `${p.nombre} ${p.apellidos} registrado.`,
             time: new Date(p.fecha_registro).toLocaleDateString(),
@@ -85,7 +85,7 @@ export default function SuperAdminDashboard({ onNavigate }) {
         }
         if (recentCitasRes.data) {
           activities.push(...recentCitasRes.data.map(c => ({
-            id: 'c-'+c.fecha_registro,
+            id: 'c-' + c.fecha_registro,
             action: 'Cita Agendada',
             detail: `Cita para ${c.pacientes?.nombre} ${c.pacientes?.apellidos}`,
             time: new Date(c.fecha_registro).toLocaleDateString(),
@@ -93,7 +93,7 @@ export default function SuperAdminDashboard({ onNavigate }) {
             timestamp: new Date(c.fecha_registro).getTime()
           })));
         }
-        activities.sort((a,b) => b.timestamp - a.timestamp);
+        activities.sort((a, b) => b.timestamp - a.timestamp);
         setRecentActivity(activities.slice(0, 5));
 
       } catch (err) {
@@ -116,7 +116,7 @@ export default function SuperAdminDashboard({ onNavigate }) {
   const formattedDate = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
 
   if (loading) {
-     return <div className="p-6 h-full flex items-center justify-center"><Spinner /></div>;
+    return <div className="p-6 h-full flex items-center justify-center"><Spinner /></div>;
   }
 
   return (
@@ -187,53 +187,22 @@ export default function SuperAdminDashboard({ onNavigate }) {
           </div>
           <div className="space-y-4">
             {recentActivity.length === 0 ? (
-               <p className="text-sm text-hav-text-muted">No hay actividad reciente.</p>
+              <p className="text-sm text-hav-text-muted">No hay actividad reciente.</p>
             ) : (
-                recentActivity.map((act) => (
-                  <div key={act.id} className="flex gap-3 items-start">
-                    <div className="w-8 h-8 rounded-full bg-hav-primary/10 text-hav-primary text-xs font-bold flex items-center justify-center flex-shrink-0">
-                      {act.avatar}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-hav-text-main">{act.action}</p>
-                      <p className="text-xs text-hav-text-muted truncate">{act.detail}</p>
-                      <p className="text-[11px] text-gray-400 mt-0.5">{act.time}</p>
-                    </div>
+              recentActivity.map((act) => (
+                <div key={act.id} className="flex gap-3 items-start">
+                  <div className="w-8 h-8 rounded-full bg-hav-primary/10 text-hav-primary text-xs font-bold flex items-center justify-center flex-shrink-0">
+                    {act.avatar}
                   </div>
-                ))
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Staff quick list */}
-      <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-hav-text-main">Personal Activo en Base de Datos</h3>
-          <button
-            onClick={() => onNavigate && onNavigate('staff')}
-            className="text-xs text-hav-primary hover:underline font-medium"
-          >
-            Ver gestión completa →
-          </button>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {activeStaff.length === 0 ? (
-              <div className="col-span-full py-4 text-center text-sm text-hav-text-muted bg-gray-50 rounded-xl">Cargando personal...</div>
-          ) : (
-              activeStaff.map((s) => (
-                <div key={s.id} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-hav-primary/5 transition-colors border border-transparent hover:border-hav-primary/20 cursor-pointer">
-                  <div className="w-9 h-9 rounded-full bg-hav-primary/10 text-hav-primary text-xs font-bold flex items-center justify-center shadow-inner">
-                    {s.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-hav-text-main">{act.action}</p>
+                    <p className="text-xs text-hav-text-muted truncate">{act.detail}</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">{act.time}</p>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-hav-text-main truncate">{s.name}</p>
-                    <p className="text-xs text-hav-text-muted">{ROLE_LABELS[s.role]}</p>
-                  </div>
-                  <div className="ml-auto w-2 h-2 rounded-full bg-hav-secondary shadow-[0_0_8px_rgba(161,217,90,0.8)] flex-shrink-0" title="Cuenta Activa" />
                 </div>
               ))
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
