@@ -457,7 +457,9 @@ export default function MedicoDashboard({ user, showToast }) {
                     >
                       <div className="text-left">
                         <p className="text-sm font-semibold text-hav-text-main">{h.diagnostico}</p>
-                        <p className="text-xs text-hav-text-muted">{fecha} · {h.cita?.especialista?.nombre_completo || 'Médico internista'}</p>
+                        <p className="text-xs text-hav-text-muted">
+                          {fecha} · {(Array.isArray(h.cita) ? h.cita[0] : h.cita)?.especialista?.nombre_completo || 'Médico internista'}
+                        </p>
                       </div>
                       {expandedHistory === h.id_consulta ? <ChevronUp size={15} className="text-hav-text-muted" /> : <ChevronDown size={15} className="text-hav-text-muted" />}
                     </button>
@@ -567,7 +569,9 @@ export default function MedicoDashboard({ user, showToast }) {
                 <div className="space-y-4">
                   {globalHistory.map((h) => {
                     const fecha = new Date(h.fecha_realizada).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-                    const p = h.cita.pacientes;
+                    const citaObj = Array.isArray(h.cita) ? h.cita[0] : h.cita;
+                    const p = citaObj?.pacientes;
+                    const idConsultaStr = h.id_consulta ? String(h.id_consulta).substring(0, 8) : 'N/A';
                     return (
                       <div key={h.id_consulta} className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm hover:border-hav-primary/30 transition-colors">
                         <div className="flex justify-between items-start mb-3 border-b border-gray-50 pb-3">
@@ -577,7 +581,7 @@ export default function MedicoDashboard({ user, showToast }) {
                             </p>
                             <p className="text-xs text-hav-text-muted mt-0.5 capitalize">{fecha}</p>
                           </div>
-                          <span className="bg-gray-100 text-gray-500 text-[10px] px-2 py-1 rounded font-bold tracking-wider">CONSULTA #{h.id_consulta.substring(0, 8)}</span>
+                          <span className="bg-gray-100 text-gray-500 text-[10px] px-2 py-1 rounded font-bold tracking-wider">CONSULTA #{idConsultaStr}</span>
                         </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
