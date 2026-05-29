@@ -249,7 +249,18 @@ export default function CalendarView({ userRole, showToast }) {
       showToast?.({ type: 'error', title: 'Campos incompletos', message: 'Complete todos los campos obligatorios' });
       return;
     }
-    if (isBlocked(availableBlocks, selectedDateStr, form.time)) {
+
+    const dateForSave = form.editingId && editDate ? editDate : selectedDateStr;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const targetDate = new Date(`${dateForSave}T00:00:00`);
+
+    if (targetDate < today) {
+      showToast?.({ type: 'error', title: 'Fecha inválida', message: 'No se pueden programar citas en fechas pasadas.' });
+      return;
+    }
+
+    if (isBlocked(availableBlocks, dateForSave, form.time)) {
       showToast?.({ type: 'error', title: 'Sin disponibilidad', message: 'La hora elegida está bloqueada para este especialista' });
       return;
     }
