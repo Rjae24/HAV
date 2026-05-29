@@ -2,10 +2,10 @@ import { useState } from 'react';
 import FinanzasReport from './FinanzasReport';
 import CensoPacientesReport from './CensoPacientesReport';
 import RendimientoEspecialistasReport from './RendimientoEspecialistasReport';
-import EpidemiologiaReport from './EpidemiologiaReport';
+import EspecialidadesReport from './EspecialidadesReport';
 
 export default function ReportsView({ showToast }) {
-  const [activeSubTab, setActiveSubTab] = useState('finanzas'); // 'finanzas', 'censo', 'especialistas' o 'epidemiologia'
+  const [activeSubTab, setActiveSubTab] = useState('finanzas'); // 'finanzas', 'censo', 'especialistas' o 'especialidades'
 
   return (
     <div className="p-6 space-y-6 view-enter h-[calc(100vh-80px)] overflow-y-auto custom-scrollbar flex flex-col">
@@ -25,7 +25,7 @@ export default function ReportsView({ showToast }) {
               { id: 'finanzas', label: 'Reporte Financiero' },
               { id: 'censo', label: 'Censo de Pacientes' },
               { id: 'especialistas', label: 'Rendimiento Especialistas' },
-              { id: 'epidemiologia', label: 'Perfil Epidemiológico' }
+              { id: 'especialidades', label: 'Demanda por Especialidad' }
             ].map(tab => (
               <button 
                 key={tab.id}
@@ -54,8 +54,8 @@ export default function ReportsView({ showToast }) {
         {activeSubTab === 'especialistas' && (
           <RendimientoEspecialistasReport showToast={showToast} />
         )}
-        {activeSubTab === 'epidemiologia' && (
-          <EpidemiologiaReport showToast={showToast} />
+        {activeSubTab === 'especialidades' && (
+          <EspecialidadesReport showToast={showToast} />
         )}
       </div>
     </div>
