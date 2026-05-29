@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import Spinner from '../../components/Spinner';
 import { printFicha } from '../../lib/printFicha';
 import MedicoBillingReport from './MedicoBillingReport';
+import { printSOAP } from '../../lib/printSOAP';
 
 export default function MedicoDashboard({ user, showToast }) {
   const [appointments, setAppointments] = useState([]);
@@ -76,8 +77,9 @@ export default function MedicoDashboard({ user, showToast }) {
       const { data, error } = await supabase
         .from('consulta')
         .select(`
-          id_consulta, diagnostico, tratamiento, notas_medicas, fecha_realizada,
-          cita!inner(id_paciente, especialista (nombre_completo))
+          id_consulta, id_cita, subjetivo, objetivo, diagnostico, tratamiento, notas_medicas, fecha_realizada,
+          tension_arterial, frecuencia_cardiaca, temperatura, saturacion_oxigeno, peso, imc,
+          cita!inner(id_paciente, especialista (nombre_completo, especialidad))
         `)
         .eq('cita.id_paciente', pacienteId)
         .order('fecha_realizada', { ascending: false });
@@ -95,7 +97,8 @@ export default function MedicoDashboard({ user, showToast }) {
       const { data, error } = await supabase
         .from('consulta')
         .select(`
-          id_consulta, diagnostico, tratamiento, notas_medicas, fecha_realizada,
+          id_consulta, id_cita, subjetivo, objetivo, diagnostico, tratamiento, notas_medicas, fecha_realizada,
+          tension_arterial, frecuencia_cardiaca, temperatura, saturacion_oxigeno, peso, imc,
           cita!inner(id_paciente, pacientes (cedula, nombre, apellidos))
         `)
         .eq('cita.id_especialista', user.id)
@@ -475,8 +478,29 @@ export default function MedicoDashboard({ user, showToast }) {
                           <p className="text-xs text-hav-text-main whitespace-pre-wrap">{h.tratamiento}</p>
                         </div>
 
-                        {/* Solicitar Interconsulta */}
-                        <div className="pt-3 border-t border-white flex justify-end">
+                        {/* Acciones */}
+                        <div className="pt-3 border-t border-white flex justify-end gap-2">
+                          <button
+                            onClick={() => {
+                              const spec = (Array.isArray(h.cita) ? h.cita[0] : h.cita)?.especialista || {
+                                nombre_completo: selectedAppt?.especialista?.nombre_completo || user.name,
+                                especialidad: selectedAppt?.especialista?.especialidad || 'Especialista'
+                              };
+                              printSOAP({
+                                patient: {
+                                  nombre: selectedAppt?.pacientes?.nombre,
+                                  apellidos: selectedAppt?.pacientes?.apellidos,
+                                  cedula: selectedAppt?.pacientes?.cedula
+                                },
+                                consulta: h,
+                                specialist: spec
+                              });
+                            }}
+                            className="bg-hav-primary/10 text-hav-primary hover:bg-hav-primary/20 border border-hav-primary/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 shadow-sm"
+                          >
+                             <FileText size={12} /> Imprimir Receta / SOAP
+                          </button>
+                          
                           <button
                             onClick={() => {
                                setInterForm({ ...interForm, id_consulta: h.id_consulta });
@@ -581,7 +605,24 @@ export default function MedicoDashboard({ user, showToast }) {
                             </p>
                             <p className="text-xs text-hav-text-muted mt-0.5 capitalize">{fecha}</p>
                           </div>
-                          <span className="bg-gray-100 text-gray-500 text-[10px] px-2 py-1 rounded font-bold tracking-wider">CONSULTA #{idConsultaStr}</span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => {
+                                printSOAP({
+                                  patient: p,
+                                  consulta: h,
+                                  specialist: {
+                                    nombre_completo: user.name,
+                                    especialidad: user.specialty || 'Especialista'
+                                  }
+                                });
+                              }}
+                              className="px-2.5 py-1.5 bg-hav-primary/10 hover:bg-hav-primary/20 text-hav-primary border border-hav-primary/10 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all"
+                            >
+                              <FileText size={10} /> Imprimir SOAP
+                            </button>
+                            <span className="bg-gray-100 text-gray-500 text-[10px] px-2 py-1.5 rounded font-bold tracking-wider">CONSULTA #{idConsultaStr}</span>
+                          </div>
                         </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">

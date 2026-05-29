@@ -6,6 +6,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import Spinner from '../../components/Spinner';
 import RecepcionGuardiasReport from './RecepcionGuardiasReport';
+import { printArqueo } from '../../lib/printArqueo';
 
 export default function RecepcionReportsView({ showToast }) {
   const [activeSubTab, setActiveSubTab] = useState('citas'); // 'citas', 'llamadas' o 'guardias'
@@ -287,6 +288,26 @@ export default function RecepcionReportsView({ showToast }) {
               >
                 <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
               </button>
+              {activeSubTab === 'citas' && (
+                <button
+                  onClick={() => {
+                    const session = JSON.parse(localStorage.getItem('hav_session') || 'null');
+                    const cashierObj = {
+                      name: session?.name || user?.name || 'Cajero de Guardia',
+                      email: session?.email || user?.email || 'recepcion@hav.edu.ve'
+                    };
+                    printArqueo({
+                      appointments: filteredAppointments,
+                      cashier: cashierObj,
+                      tasaBase: 38.50,
+                      periodLabel: `Reporte de Caja (${filterType.toUpperCase()})`
+                    });
+                  }}
+                  className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all shadow-md shadow-emerald-600/20"
+                >
+                  <BarChart3 size={16} /> Imprimir Arqueo (PDF)
+                </button>
+              )}
               <button
                 onClick={activeSubTab === 'citas' ? handleExportExcel : handleExportLlamadas}
                 className="flex items-center gap-2 bg-[#1e4f5c] hover:bg-[#12313a] text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all shadow-md shadow-[#1e4f5c]/20"
