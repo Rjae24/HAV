@@ -109,8 +109,9 @@ export default function EspecialidadesReport({ showToast }) {
     const serializer = new XMLSerializer();
     let svgSource = serializer.serializeToString(svgRef.current);
     
-    if (!svgSource.match(/^<svg[^>]+xmlns="http\/\/www\.w3\.org\/2000\/svg"/)) {
-      svgSource = svgSource.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+    // Si no contiene el namespace de SVG, agregarlo de forma segura
+    if (!svgSource.includes('xmlns="http://www.w3.org/2000/svg"')) {
+      svgSource = svgSource.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
     }
     
     svgSource = '<?xml version="1.0" standalone="no"?>\r\n' + svgSource;
@@ -157,6 +158,9 @@ export default function EspecialidadesReport({ showToast }) {
             <stop offset="100%" stopColor="#14859f" />
           </linearGradient>
         </defs>
+
+        {/* Fondo blanco vectorial explícito para evitar transparencia y asegurar legibilidad */}
+        <rect width={width} height={height} fill="#ffffff" rx={12} />
 
         {/* Líneas de cuadrícula */}
         {[0.25, 0.5, 0.75, 1].map((ratio, index) => {
