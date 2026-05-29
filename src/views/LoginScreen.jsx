@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Eye, EyeOff, LogIn, Shield, HeartPulse } from 'lucide-react';
+import { useState } from 'react';
+import { Eye, EyeOff, LogIn, HeartPulse } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import Spinner from '../components/Spinner';
 
@@ -9,42 +9,6 @@ export default function LoginScreen({ onLogin, showToast }) {
   const [showPass, setShowPass] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [demoUsers, setDemoUsers] = useState([]);
-
-  useEffect(() => {
-    async function fetchDemoUsers() {
-      try {
-        const { data, error } = await supabase
-          .from('usuario')
-          .select(`
-            username,
-            password_hash,
-            rol (nombre_rol),
-            especialista (nombre_completo),
-            recepcion (nombre_empleado)
-          `)
-          .limit(20);
-
-        if (!error && data) {
-          const parsed = data.map(u => {
-            let label = u.rol?.nombre_rol || 'Usuario';
-            if (label === 'admin') label = 'Super Admin';
-            else if (label === 'especialista') label = u.especialista?.nombre_completo || 'Médico';
-            else if (label === 'caja' || label === 'recepcion') label = u.recepcion?.nombre_empleado || 'Recepción';
-            return {
-              label,
-              email: u.username,
-              pass: u.password_hash
-            };
-          });
-          setDemoUsers(parsed);
-        }
-      } catch (err) {
-        console.error("Error fetching demo users", err);
-      }
-    }
-    fetchDemoUsers();
-  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -126,35 +90,7 @@ export default function LoginScreen({ onLogin, showToast }) {
       <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full opacity-20 blur-[100px]" style={{ background: '#66AB1A', transform: 'translate(30%, -30%)' }} />
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full opacity-20 blur-[100px]" style={{ background: '#A1D95A', transform: 'translate(-40%, 40%)' }} />
 
-      {/* Sidebar for Development */}
-      <div className="hidden lg:block absolute left-8 top-1/2 -translate-y-1/2 w-64 bg-white/90 backdrop-blur-md p-5 rounded-2xl shadow-xl border border-white/50 z-50">
-        <div className="flex items-center gap-2 mb-4 border-b border-gray-100 pb-3">
-          <Shield size={18} className="text-hav-primary" />
-          <h3 className="font-semibold text-hav-text-main text-sm">Entorno de Pruebas</h3>
-        </div>
-        <p className="text-xs text-hav-text-muted mb-4">
-          Seleccione un perfil para autocompletar credenciales remotas.
-        </p>
-        <div className="flex flex-col gap-2">
-          {demoUsers.length === 0 ? (
-            <div className="py-2 text-center text-xs text-gray-400">
-              Cargando usuarios desde BD...
-            </div>
-          ) : (
-            demoUsers.map(({ label, email: e, pass }) => (
-              <button
-                key={e}
-                type="button"
-                onClick={() => { setEmail(e); setPassword(pass); }}
-                className="flex flex-col items-start gap-0.5 px-3 py-2 bg-gray-50 hover:bg-hav-primary/10 border border-gray-100 hover:border-hav-primary/30 rounded-xl transition-all text-left group"
-              >
-                <span className="font-semibold text-gray-700 group-hover:text-hav-primary text-xs">{label}</span>
-                <span className="text-[10px] text-gray-400 truncate w-full">{e}</span>
-              </button>
-            ))
-          )}
-        </div>
-      </div>
+
 
       <div className="relative z-10 w-full max-w-md px-6">
         
