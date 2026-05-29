@@ -168,15 +168,14 @@ export default function EspecialidadesReport({ showToast }) {
         {/* Barra superior de acento con color institucional */}
         <rect width={width} height={6} fill="url(#specialtyGradient)" rx={3} />
 
-        {/* --- ENCABEZADO CORPORATIVO DE LA EMPRESA (HOSPITAL VIRTUAL) --- */}
+        {/* --- ENCABEZADO CORPORATIVO DE LA EMPRESA (HOSPITAL ADVENTISTA DE VENEZUELA) --- */}
         <g transform="translate(25, 25)">
-          {/* Isotipo: Cruz Médica Minimalista y Moderna */}
-          <rect x="0" y="4" width="16" height="5" fill="#14859f" rx={1.5} />
-          <rect x="5.5" y="-1.5" width="5" height="16" fill="#14859f" rx={1.5} />
+          {/* Logotipo Oficial del Hospital Adventista de Venezuela */}
+          <image href="https://hav.com.ve/wp-content/uploads/2025/08/Logo-HAV-Inicio-Web.png" x="0" y="-8" width="40" height="32" preserveAspectRatio="xMidYMid meet" />
           
           {/* Nombre de la Empresa */}
-          <text x="25" y="10" fill="#1e4f5c" fontSize="13px" fontWeight="900" fontFamily="system-ui, sans-serif" letterSpacing="0.5px">HOSPITAL VIRTUAL (HAV)</text>
-          <text x="25" y="22" fill="#94a3b8" fontSize="8px" fontWeight="700" fontFamily="system-ui, sans-serif" letterSpacing="1px">DEPARTAMENTO DE INTELIGENCIA DE NEGOCIOS</text>
+          <text x="50" y="10" fill="#1e4f5c" fontSize="13px" fontWeight="900" fontFamily="system-ui, sans-serif" letterSpacing="0.5px">HOSPITAL ADVENTISTA DE VENEZUELA (HAV)</text>
+          <text x="50" y="22" fill="#94a3b8" fontSize="8px" fontWeight="700" fontFamily="system-ui, sans-serif" letterSpacing="1px">DEPARTAMENTO DE INTELIGENCIA DE NEGOCIOS</text>
         </g>
 
         {/* Título y Subtítulo del Reporte */}

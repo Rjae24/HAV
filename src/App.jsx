@@ -70,7 +70,11 @@ function TopBar({ user, currentView, onLogout }) {
     <header className="flex items-center justify-between md:justify-end px-8 py-5 bg-transparent w-full">
       {/* Mobile only brand */}
       <div className="md:hidden flex items-center gap-2">
-        <p className="font-display font-bold text-hav-primary text-lg">HAV Portal</p>
+        <img 
+          src="https://hav.com.ve/wp-content/uploads/2025/08/Logo-HAV-Inicio-Web.png" 
+          alt="Logo HAV" 
+          className="h-8 w-auto object-contain" 
+        />
       </div>
 
       {/* User Info & Logout */}

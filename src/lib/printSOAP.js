@@ -239,9 +239,12 @@ export function printSOAP({ patient, consulta, specialist }) {
         <div class="half">
           <div>
             <div class="header">
-              <div class="hospital-info">
-                <h1>HOSPITAL ADVENTISTA DE VENEZUELA</h1>
-                <p>Cuidado de la Salud Integral & Excelencia Médica</p>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <img src="https://hav.com.ve/wp-content/uploads/2025/08/Logo-HAV-Inicio-Web.png" alt="Logo HAV" style="height: 38px; width: auto; object-fit: contain;" />
+                <div class="hospital-info">
+                  <h1>HOSPITAL ADVENTISTA DE VENEZUELA</h1>
+                  <p>Cuidado de la Salud Integral & Excelencia Médica</p>
+                </div>
               </div>
               <div class="document-title">
                 <h2>Informe Médico SOAP</h2>
@@ -298,9 +301,12 @@ export function printSOAP({ patient, consulta, specialist }) {
         <div class="half">
           <div>
             <div class="header">
-              <div class="hospital-info">
-                <h1>HOSPITAL ADVENTISTA DE VENEZUELA</h1>
-                <p>Cuidado de la Salud Integral & Excelencia Médica</p>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <img src="https://hav.com.ve/wp-content/uploads/2025/08/Logo-HAV-Inicio-Web.png" alt="Logo HAV" style="height: 38px; width: auto; object-fit: contain;" />
+                <div class="hospital-info">
+                  <h1>HOSPITAL ADVENTISTA DE VENEZUELA</h1>
+                  <p>Cuidado de la Salud Integral & Excelencia Médica</p>
+                </div>
               </div>
               <div class="document-title">
                 <h2>Indicaciones y Receta</h2>

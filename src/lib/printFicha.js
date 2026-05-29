@@ -190,9 +190,12 @@ export function printFicha(patient, history) {
       <body>
         <!-- Encabezado Membretado -->
         <div class="header-container">
-          <div class="hospital-brand">
-            <h1 class="hospital-title">Hospital Adventista de Venezuela</h1>
-            <p className="hospital-sub">Portal Clínico HAV · Departamento de Historias Médicas</p>
+          <div style="display: flex; align-items: center; gap: 15px;">
+            <img src="https://hav.com.ve/wp-content/uploads/2025/08/Logo-HAV-Inicio-Web.png" alt="Logo HAV" style="height: 52px; width: auto; object-fit: contain;" />
+            <div class="hospital-brand">
+              <h1 class="hospital-title">Hospital Adventista de Venezuela</h1>
+              <p class="hospital-sub">Portal Clínico HAV · Departamento de Historias Médicas</p>
+            </div>
           </div>
           <div class="document-title">
             <p class="doc-name">Ficha Clínica de Antecedentes</p>

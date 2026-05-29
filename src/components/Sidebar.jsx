@@ -38,13 +38,15 @@ export default function Sidebar({ user, currentView, onNavigate }) {
   return (
     <aside className="hidden md:flex flex-col w-64 min-h-screen bg-white border-r border-gray-100 shadow-sm">
       {/* Logo */}
-      <div className="px-6 py-5 border-b border-gray-100">
+      <div className="px-6 py-4 border-b border-gray-100">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #367281, #1e4f5c)' }}>
-            <HeartPulse size={18} className="text-white" />
-          </div>
+          <img 
+            src="https://hav.com.ve/wp-content/uploads/2025/08/Logo-HAV-Inicio-Web.png" 
+            alt="Logo HAV" 
+            className="h-10 w-auto object-contain" 
+          />
           <div className="leading-none">
-            <p className="font-display font-bold text-hav-primary text-base">HAV Portal</p>
+            <p className="font-display font-bold text-hav-primary text-[13px] leading-tight">HOSPITAL ADVENTISTA</p>
             <p className="text-hav-text-muted text-[10px] mt-0.5">{roleLabels[user.role]}</p>
           </div>
         </div>
