@@ -139,7 +139,10 @@ export default function EspecialidadesReport({ showToast }) {
     const paddingLeft = 180;
     const paddingRight = 60;
     const chartWidth = width - paddingLeft - paddingRight;
-    const height = chartData.length * (barHeight + gap) + 40;
+    
+    // Altura adicional para el encabezado corporativo
+    const headerHeight = 110;
+    const height = chartData.length * (barHeight + gap) + headerHeight + 50;
 
     const maxCount = Math.max(...chartData.map(d => d.count)) || 1;
 
@@ -149,7 +152,7 @@ export default function EspecialidadesReport({ showToast }) {
         width="100%" 
         height={height} 
         viewBox={`0 0 ${width} ${height}`} 
-        className="bg-white rounded-xl"
+        className="bg-white rounded-2xl shadow-sm border border-gray-100"
         style={{ maxWidth: '100%' }}
       >
         <defs>
@@ -159,8 +162,31 @@ export default function EspecialidadesReport({ showToast }) {
           </linearGradient>
         </defs>
 
-        {/* Fondo blanco vectorial explícito para evitar transparencia y asegurar legibilidad */}
-        <rect width={width} height={height} fill="#ffffff" rx={12} />
+        {/* Tarjeta de fondo blanco vectorial completo con borde redondeado y sombra estética */}
+        <rect width={width} height={height} fill="#ffffff" rx={16} stroke="#f1f5f9" strokeWidth={2} />
+        
+        {/* Barra superior de acento con color institucional */}
+        <rect width={width} height={6} fill="url(#specialtyGradient)" rx={3} />
+
+        {/* --- ENCABEZADO CORPORATIVO DE LA EMPRESA (HOSPITAL VIRTUAL) --- */}
+        <g transform="translate(25, 25)">
+          {/* Isotipo: Cruz Médica Minimalista y Moderna */}
+          <rect x="0" y="4" width="16" height="5" fill="#14859f" rx={1.5} />
+          <rect x="5.5" y="-1.5" width="5" height="16" fill="#14859f" rx={1.5} />
+          
+          {/* Nombre de la Empresa */}
+          <text x="25" y="10" fill="#1e4f5c" fontSize="13px" fontWeight="900" fontFamily="system-ui, sans-serif" letterSpacing="0.5px">HOSPITAL VIRTUAL (HAV)</text>
+          <text x="25" y="22" fill="#94a3b8" fontSize="8px" fontWeight="700" fontFamily="system-ui, sans-serif" letterSpacing="1px">DEPARTAMENTO DE INTELIGENCIA DE NEGOCIOS</text>
+        </g>
+
+        {/* Título y Subtítulo del Reporte */}
+        <g transform="translate(25, 75)">
+          <text fill="#0f172a" fontSize="13.5px" fontWeight="800" fontFamily="system-ui, sans-serif">Demanda por Especialidad Médica</text>
+          <text y="15" fill="#64748b" fontSize="9px" fontWeight="500" fontFamily="system-ui, sans-serif">Distribución de consultas atendidas en el período actual</text>
+        </g>
+
+        {/* Línea divisoria decorativa del encabezado */}
+        <line x1="25" y1="100" x2={width - 25} y2="100" stroke="#f1f5f9" strokeWidth={1} />
 
         {/* Líneas de cuadrícula */}
         {[0.25, 0.5, 0.75, 1].map((ratio, index) => {
@@ -170,20 +196,21 @@ export default function EspecialidadesReport({ showToast }) {
             <g key={index}>
               <line 
                 x1={x} 
-                y1={10} 
+                y1={headerHeight + 10} 
                 x2={x} 
-                y2={height - 30} 
+                y2={height - 35} 
                 stroke="#f1f5f9" 
                 strokeWidth={1} 
                 strokeDasharray="4 4"
               />
               <text 
                 x={x} 
-                y={height - 12} 
+                y={height - 15} 
                 fill="#94a3b8" 
                 fontSize="9px" 
                 fontWeight="600"
                 textAnchor="middle"
+                fontFamily="system-ui, sans-serif"
               >
                 {gridVal} {gridVal === 1 ? 'cita' : 'citas'}
               </text>
@@ -193,18 +220,19 @@ export default function EspecialidadesReport({ showToast }) {
 
         {/* Barras */}
         {chartData.map((d, index) => {
-          const y = index * (barHeight + gap) + 15;
+          const y = index * (barHeight + gap) + headerHeight + 15;
           const currentBarWidth = maxCount > 0 ? (d.count / maxCount) * chartWidth : 0;
           
           return (
             <g key={index} className="transition-all duration-300">
               <text 
                 x={paddingLeft - 15} 
-                y={y + barHeight / 2 + 3} 
+                y={y + barHeight / 2 + 3.5} 
                 fill="#334155" 
                 fontSize="10px" 
                 fontWeight="700" 
                 textAnchor="end"
+                fontFamily="system-ui, sans-serif"
               >
                 {d.name.length > 25 ? `${d.name.substring(0, 23)}...` : d.name}
               </text>
@@ -235,6 +263,7 @@ export default function EspecialidadesReport({ showToast }) {
                 fill="#0f172a" 
                 fontSize="10px" 
                 fontWeight="800"
+                fontFamily="system-ui, sans-serif"
               >
                 {d.count} {d.count === 1 ? 'cita' : 'citas'}
               </text>
