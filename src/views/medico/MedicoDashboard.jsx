@@ -50,9 +50,16 @@ export default function MedicoDashboard({ user, showToast }) {
 
       if (errCitas) throw errCitas;
       
-      setAppointments(citas || []);
-      if (citas && citas.length > 0 && !selectedAppt) {
-        setSelectedAppt(citas[0]);
+      const activeCitas = (citas || []).filter(c => c.estado !== 'completada' && c.estado !== 'cancelada');
+      setAppointments(activeCitas);
+      
+      if (activeCitas.length > 0) {
+        const stillActive = activeCitas.find(c => c.id_cita === selectedAppt?.id_cita);
+        if (!stillActive) {
+          setSelectedAppt(activeCitas[0]);
+        }
+      } else {
+        setSelectedAppt(null);
       }
 
       // Traer otros especialistas para interconsulta
