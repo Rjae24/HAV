@@ -17,6 +17,7 @@ const NAV_ITEMS = {
     { id: 'dashboard', label: 'Inicio', icon: LayoutDashboard },
     { id: 'appointments', label: 'Calendario', icon: CalendarDays },
     { id: 'patients', label: 'Pacientes', icon: ClipboardList },
+    { id: 'reports', label: 'Reportes', icon: BarChart3 },
   ],
   medico: [
     { id: 'dashboard', label: 'Mis Citas', icon: CalendarDays },

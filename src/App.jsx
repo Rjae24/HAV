@@ -12,6 +12,7 @@ import StaffManagement from './views/superadmin/StaffManagement';
 import ReportsView from './views/superadmin/ReportsView';
 import SettingsView from './views/superadmin/SettingsView';
 import RecepcionDashboard from './views/recepcion/RecepcionDashboard';
+import RecepcionReportsView from './views/recepcion/RecepcionReportsView';
 import MedicoDashboard from './views/medico/MedicoDashboard';
 import InterconsultasView from './views/medico/InterconsultasView';
 import PatientsView from './views/shared/PatientsView';
@@ -37,6 +38,7 @@ function RouteView({ user, currentView, onNavigate, showToast }) {
     if (currentView === 'dashboard') return <RecepcionDashboard {...props} />;
     if (currentView === 'appointments') return <CalendarView {...props} userRole={user.role} />;
     if (currentView === 'patients') return <PatientsView {...props} userRole={user.role} />;
+    if (currentView === 'reports') return <RecepcionReportsView {...props} />;
   }
 
   // Médico routes

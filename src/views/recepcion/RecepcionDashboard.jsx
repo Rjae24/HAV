@@ -10,7 +10,6 @@ export default function RecepcionDashboard({ user, onNavigate, showToast }) {
   const [appointments, setAppointments] = useState([]);
   const [stats, setStats] = useState({
     totalToday: 0,
-    waitingRoom: 0,
     completedToday: 0,
     revenueToday: 0,
     dbPatients: 0
@@ -36,7 +35,7 @@ export default function RecepcionDashboard({ user, onNavigate, showToast }) {
     try {
       setLoading(true);
       
-      // 1. Obtener Citas con datos de Paciente, Especialista y Pago
+      // 1. Obtener Citas con datos de Paciente y Especialista (sin join directo de pago para evitar fallos relacionales de PostgREST)
       const { data: citas, error: errCitas } = await supabase
         .from('cita')
         .select(`
@@ -46,53 +45,60 @@ export default function RecepcionDashboard({ user, onNavigate, showToast }) {
           motivo_consulta,
           id_pago,
           pacientes ( id_paciente, cedula, nombre, apellidos, telefono ),
-          especialista ( id_usuario, nombre_completo, especialidad ),
-          pago ( id_pago, monto_usd, metodo_pago )
+          especialista ( id_usuario, nombre_completo, especialidad )
         `)
         .order('fecha_pautada', { ascending: true });
 
       if (errCitas) throw errCitas;
 
-      const allCitas = citas || [];
-      setAppointments(allCitas);
+      // 2. Obtener todos los pagos registrados
+      const { data: pagos, error: errPagos } = await supabase
+        .from('pago')
+        .select('id_pago, monto_usd, metodo_pago, fecha_pago');
 
-      // 2. Calcular estadísticas diarias
+      if (errPagos) throw errPagos;
+
+      // Unir los pagos en memoria de forma segura
+      const mappedCitas = (citas || []).map(c => ({
+        ...c,
+        pago: pagos ? pagos.find(p => p.id_pago === c.id_pago) : null
+      }));
+
+      setAppointments(mappedCitas);
+
+      // 3. Calcular estadísticas diarias
       const todayStr = new Date().toISOString().split('T')[0];
       
-      const todayAppts = allCitas.filter(c => {
+      const todayAppts = mappedCitas.filter(c => {
         const cDate = new Date(c.fecha_pautada).toISOString().split('T')[0];
         return cDate === todayStr;
       });
 
-      const waiting = todayAppts.filter(c => c.estado === 'en_espera').length;
       const completed = todayAppts.filter(c => c.estado === 'completada').length;
 
-      // 3. Obtener recaudación diaria real de la tabla de pagos
-      const startOfToday = new Date();
-      startOfToday.setHours(0, 0, 0, 0);
-      
-      const { data: pagosHoy, error: errPagos } = await supabase
-        .from('pago')
-        .select('monto_usd')
-        .gte('fecha_pago', startOfToday.toISOString());
+      // Recaudación diaria real filtrada en JS (timezone safe)
+      const todayPagos = (pagos || []).filter(p => {
+        if (!p.fecha_pago) return false;
+        const pDate = new Date(p.fecha_pago).toISOString().split('T')[0];
+        return pDate === todayStr;
+      });
 
-      const totalRevenue = errPagos ? 0 : (pagosHoy || []).reduce((acc, p) => acc + parseFloat(p.monto_usd || 0), 0);
+      const totalRevenue = todayPagos.reduce((acc, p) => acc + parseFloat(p.monto_usd || 0), 0);
 
-      // 4. Cantidad total de pacientes en base de datos
+      // 4. Cantidad total de pacientes en la Base de Datos
       const { count: patientsCount, error: errCount } = await supabase
         .from('pacientes')
         .select('*', { count: 'exact', head: true });
 
       setStats({
         totalToday: todayAppts.length,
-        waitingRoom: waiting,
         completedToday: completed,
         revenueToday: totalRevenue,
         dbPatients: errCount ? 0 : patientsCount
       });
 
     } catch (err) {
-      console.error(err);
+      console.error("Error en RecepcionDashboard.fetchData:", err);
       if (showToast) {
         showToast({ 
           type: 'error', 
@@ -242,20 +248,13 @@ export default function RecepcionDashboard({ user, onNavigate, showToast }) {
       </div>
 
       {/* Tarjetas de Estadísticas */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { 
             label: 'Citas Hoy', 
             value: stats.totalToday, 
             icon: CalendarDays, 
             color: 'bg-hav-primary text-white shadow-hav-primary/20',
-            bg: 'bg-white' 
-          },
-          { 
-            label: 'En Sala de Espera', 
-            value: stats.waitingRoom, 
-            icon: Clock, 
-            color: 'bg-amber-500 text-white shadow-amber-500/20',
             bg: 'bg-white' 
           },
           { 
@@ -266,7 +265,7 @@ export default function RecepcionDashboard({ user, onNavigate, showToast }) {
             bg: 'bg-emerald-50/10 border-emerald-100/50' 
           },
           { 
-            label: 'Pacientes en BD', 
+            label: 'Pacientes Totales', 
             value: stats.dbPatients, 
             icon: Users, 
             color: 'bg-indigo-500 text-white shadow-indigo-500/20',
