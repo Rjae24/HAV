@@ -5,7 +5,7 @@ import Spinner from './Spinner';
 
 const BLOOD_TYPES = ['A+','A-','B+','B-','AB+','AB-','O+','O-'];
 
-export default function HistorialClinicoPanel({ patient, showToast, onRefresh }) {
+export default function HistorialClinicoPanel({ patient, showToast, onRefresh, userRole }) {
   const [editing, setEditing]       = useState(false);
   const [saving, setSaving]         = useState(false);
 
@@ -139,9 +139,11 @@ export default function HistorialClinicoPanel({ patient, showToast, onRefresh })
           <Heart size={18} className="text-hav-primary" /> Historial Base
         </h3>
         {!editing ? (
-          <button onClick={openEdit} className="flex items-center gap-1.5 text-xs font-semibold text-hav-primary bg-hav-primary/8 hover:bg-hav-primary/15 px-3 py-1.5 rounded-lg transition-colors">
-            <Pencil size={13} /> Editar
-          </button>
+          userRole === 'medico' && (
+            <button onClick={openEdit} className="flex items-center gap-1.5 text-xs font-semibold text-hav-primary bg-hav-primary/8 hover:bg-hav-primary/15 px-3 py-1.5 rounded-lg transition-colors">
+              <Pencil size={13} /> Editar
+            </button>
+          )
         ) : (
           <div className="flex items-center gap-2">
             <button onClick={() => setEditing(false)} className="text-xs font-medium text-gray-500 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition-colors">Cancelar</button>

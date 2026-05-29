@@ -595,8 +595,10 @@ export default function CalendarView({ userRole, showToast }) {
                     {foundPatient === 'not_found' && (
                       <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
                         <p className="text-xs text-amber-700">No se encontró paciente con esa cédula.</p>
-                        <button type="button" onClick={() => { setFoundPatient(null); setShowNewPatientForm(true); setNewPatient(n => ({...n, cedula: cedulaSearch})); }}
-                          className="text-[10px] font-bold text-hav-primary hover:underline ml-2 whitespace-nowrap">+ Crear nuevo</button>
+                        {userRole === 'recepcion' && (
+                          <button type="button" onClick={() => { setFoundPatient(null); setShowNewPatientForm(true); setNewPatient(n => ({...n, cedula: cedulaSearch})); }}
+                            className="text-[10px] font-bold text-hav-primary hover:underline ml-2 whitespace-nowrap">+ Crear nuevo</button>
+                        )}
                       </div>
                     )}
                     {showNewPatientForm && (

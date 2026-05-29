@@ -121,6 +121,22 @@ export default function MedicoDashboard({ user, showToast }) {
          plan: '' 
       });
       setVitals({ tension_arterial: '', frecuencia_cardiaca: '', temperatura: '', saturacion_oxigeno: '', peso: '', imc: '' });
+
+      // Transicionar estado a 'en_consulta' si el paciente estaba 'en_espera' al ser seleccionado
+      if (selectedAppt.estado === 'en_espera') {
+        const transitionToInConsultation = async () => {
+          try {
+            await supabase.from('cita').update({ estado: 'en_consulta' }).eq('id_cita', selectedAppt.id_cita);
+            // Actualizar localmente la lista de citas
+            setAppointments(prev => prev.map(a => a.id_cita === selectedAppt.id_cita ? { ...a, estado: 'en_consulta' } : a));
+            // Actualizar el estado del objeto seleccionado
+            selectedAppt.estado = 'en_consulta';
+          } catch (err) {
+            console.error("⚠️ Error al marcar paciente en consulta:", err);
+          }
+        };
+        transitionToInConsultation();
+      }
     }
   }, [selectedAppt]);
 
@@ -242,21 +258,60 @@ export default function MedicoDashboard({ user, showToast }) {
                 const initial = a.pacientes?.nombre?.[0] || 'X';
                 const timeStr = new Date(a.fecha_pautada).toLocaleTimeString('es-ES', {hour: '2-digit', minute:'2-digit'});
                 
+                // Renderizar etiqueta de estado para la cola médica
+                let badgeEl = null;
+                if (a.estado === 'en_espera') {
+                  badgeEl = (
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
+                      isSelected ? 'bg-white/25 text-white' : 'bg-emerald-100 text-emerald-800'
+                    }`}>
+                      En Espera 🛋️
+                    </span>
+                  );
+                } else if (a.estado === 'en_consulta') {
+                  badgeEl = (
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md ${
+                      isSelected ? 'bg-white/25 text-white' : 'bg-purple-100 text-purple-800 animate-pulse'
+                    }`}>
+                      En Consulta 🩺
+                    </span>
+                  );
+                } else if (a.estado === 'completada') {
+                  badgeEl = (
+                    <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-md ${
+                      isSelected ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'
+                    }`}>
+                      Atendido
+                    </span>
+                  );
+                } else {
+                  badgeEl = (
+                    <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded-md ${
+                      isSelected ? 'bg-white/15 text-white/90' : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      No ha llegado
+                    </span>
+                  );
+                }
+
                 return (
                   <button
                     key={a.id_cita}
                     onClick={() => setSelectedAppt(a)}
                     className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all ${
-                      isSelected ? 'bg-hav-primary text-white' : 'bg-gray-50 hover:bg-hav-primary/10 text-hav-text-main'
+                      isSelected ? 'bg-hav-primary text-white shadow-md shadow-hav-primary/10' : 'bg-gray-50 hover:bg-hav-primary/10 text-hav-text-main'
                     } ${a.estado === 'completada' ? 'opacity-50' : ''}`}
                   >
                     <div className={`w-9 h-9 rounded-full font-bold text-xs flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-white/20 text-white' : 'bg-hav-primary text-white'}`}>
                       {initial}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-semibold truncate ${isSelected ? 'text-white' : 'text-hav-text-main'}`}>
-                        {pName} {a.estado === 'completada' && ' (Ok)'}
-                      </p>
+                      <div className="flex items-center justify-between gap-1.5">
+                        <p className={`text-sm font-semibold truncate ${isSelected ? 'text-white' : 'text-hav-text-main'}`}>
+                          {pName}
+                        </p>
+                        {badgeEl}
+                      </div>
                       <p className={`text-xs truncate ${isSelected ? 'text-white/70' : 'text-hav-text-muted'}`}>{timeStr} · {a.motivo_consulta}</p>
                     </div>
                   </button>

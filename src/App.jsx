@@ -34,7 +34,7 @@ function RouteView({ user, currentView, onNavigate, showToast }) {
 
   // Recepción routes
   if (user.role === 'recepcion') {
-    if (currentView === 'dashboard') return <CalendarView {...props} userRole={user.role} />;
+    if (currentView === 'dashboard') return <RecepcionDashboard {...props} />;
     if (currentView === 'appointments') return <CalendarView {...props} userRole={user.role} />;
     if (currentView === 'patients') return <PatientsView {...props} userRole={user.role} />;
   }

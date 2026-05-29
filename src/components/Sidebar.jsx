@@ -15,6 +15,7 @@ const NAV_ITEMS = {
   ],
   recepcion: [
     { id: 'dashboard', label: 'Inicio', icon: LayoutDashboard },
+    { id: 'appointments', label: 'Calendario', icon: CalendarDays },
     { id: 'patients', label: 'Pacientes', icon: ClipboardList },
   ],
   medico: [

@@ -174,7 +174,7 @@ export default function PatientsView({ showToast, userRole }) {
               className="pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-hav-primary focus:ring-2 focus:ring-hav-primary/20 w-64 shadow-sm transition-all"
             />
           </div>
-          {(userRole === 'recepcion' || userRole === 'superadmin') && (
+          {userRole === 'recepcion' && (
             <button
               onClick={() => {
                 setEditPatientId(null);
@@ -250,7 +250,7 @@ export default function PatientsView({ showToast, userRole }) {
                        </div>
                        
                        {/* Botón de Edición */}
-                       {(userRole === 'recepcion' || userRole === 'superadmin') && (
+                       {userRole === 'recepcion' && (
                          <button 
                            onClick={() => openEditModal(selected)}
                            className="p-2 text-gray-400 hover:text-hav-primary hover:bg-hav-primary/10 rounded-lg transition-colors flex items-center gap-2 text-sm font-semibold border border-transparent hover:border-hav-primary/20"
@@ -305,13 +305,14 @@ export default function PatientsView({ showToast, userRole }) {
 
                {/* Clinical Details — hidden for recepcion */}
 
-               {/* Clinical Details � hidden for recepcion */}
+               {/* Clinical Details  hidden for recepcion */}
                <div className="mt-8 space-y-8">
                    {userRole !== 'recepcion' && (
                      <HistorialClinicoPanel
                        patient={selected}
                        showToast={showToast}
                        onRefresh={() => { fetchPatients(); }}
+                       userRole={userRole}
                      />
                    )}
 
