@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { AlertTriangle, FileText, Save, ChevronDown, ChevronUp, Share2, X } from 'lucide-react';
+import { AlertTriangle, FileText, Save, ChevronDown, ChevronUp, Share2, X, DollarSign } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import Spinner from '../../components/Spinner';
+import { printFicha } from '../../lib/printFicha';
+import MedicoBillingReport from './MedicoBillingReport';
 
 export default function MedicoDashboard({ user, showToast }) {
   const [appointments, setAppointments] = useState([]);
@@ -25,6 +27,9 @@ export default function MedicoDashboard({ user, showToast }) {
   const [showInterModal, setShowInterModal] = useState(false);
   const [interForm, setInterForm] = useState({ id_consulta: null, id_especialista_recibe: '', motivo: '' });
   const [sendingInter, setSendingInter] = useState(false);
+
+  // Modal Facturacion
+  const [showBillingModal, setShowBillingModal] = useState(false);
 
   const fetchDashboardData = async () => {
     try {
@@ -233,13 +238,22 @@ export default function MedicoDashboard({ user, showToast }) {
             {user.name} · Especialista
           </p>
         </div>
-        <button
-          onClick={fetchGlobalHistory}
-          className="flex items-center gap-2 bg-white border border-gray-200 text-hav-text-main hover:bg-gray-50 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-sm"
-        >
-          {loadingGlobal ? <Spinner size="sm" /> : <FileText size={16} className="text-hav-primary" />}
-          Mis Consultas Anteriores
-        </button>
+        <div className="flex gap-2.5">
+          <button
+            onClick={() => setShowBillingModal(true)}
+            className="flex items-center gap-2 bg-white border border-gray-200 text-hav-text-main hover:bg-gray-50 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-sm"
+          >
+            <DollarSign size={16} className="text-hav-primary" />
+            Mi Facturación Mensual
+          </button>
+          <button
+            onClick={fetchGlobalHistory}
+            className="flex items-center gap-2 bg-white border border-gray-200 text-hav-text-main hover:bg-gray-50 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-sm"
+          >
+            {loadingGlobal ? <Spinner size="sm" /> : <FileText size={16} className="text-hav-primary" />}
+            Mis Consultas Anteriores
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-5">
@@ -345,6 +359,13 @@ export default function MedicoDashboard({ user, showToast }) {
                  <p><strong>Patologías:</strong> {historyRecord?.patologias || 'Ninguna registrada'}</p>
                  <p><strong>Cirugías:</strong> {historyRecord?.cirugias || 'Ninguna registrada'}</p>
               </div>
+              
+              <button
+                onClick={() => printFicha(patientRecord, historyRecord)}
+                className="mt-4 w-full flex items-center justify-center gap-1.5 bg-gray-50 hover:bg-hav-primary/5 text-hav-primary hover:text-hav-primary-dark font-semibold py-2.5 rounded-xl border border-gray-100 transition-all text-xs"
+              >
+                🖨️ Exportar Ficha Clínica (PDF)
+              </button>
             </div>
           )}
         </div>
@@ -590,6 +611,13 @@ export default function MedicoDashboard({ user, showToast }) {
           </div>
         </div>
       )}
+
+      <MedicoBillingReport
+        user={user}
+        isOpen={showBillingModal}
+        onClose={() => setShowBillingModal(false)}
+        showToast={showToast}
+      />
 
     </div>
   );
